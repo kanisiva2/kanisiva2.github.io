@@ -69,8 +69,13 @@
     const r = SPAWN_RADIUS + (Math.random() - 0.5) * SPAWN_RING;
     return { x: Math.cos(angle) * r, y: Math.sin(angle) * r, vx: 0, vy: 0 };
   }
+  function spawnOffscreen() {
+    const a = Math.random() * Math.PI * 2, dx = Math.cos(a), dy = Math.sin(a);
+    const d = Math.max(W / 2, H / (2 * TILT)) + CHUNK * 2;
+    return { x: cam.x + dx * d, y: cam.y + dy * d, vx: -dx * 4, vy: -dy * 4 };
+  }
   for (let i = 0; i < 8; i++) squirrels.push(spawnSquirrel());
-  let state = 0, timer = 15, tId = 0, score = 0, hiScore = 0;
+  let state = 0, timer = 15, tId = 0, sId = 0, score = 0, hiScore = 0;
   let fightEndTime = 0, fightTaps = 0, fightShake = 0;
   let rewardEndTime = 0, rewardStartTime = 0, bonusSeconds = 0;
   let rewardOverlay = false;
@@ -593,10 +598,11 @@
     startOv.classList.add('hidden');
     joystickWrap.classList.remove('hidden');
     startMus();
+    sId = setInterval(() => { if (state === 1) squirrels.push(spawnOffscreen()); }, 5000);
     tId = setInterval(() => {
       if (state === 3 || rewardOverlay) return;
       if (--timer <= 0) {
-        timer = 0; state = 2; clearInterval(tId); stopMus(); endSfx();
+        timer = 0; state = 2; clearInterval(tId); clearInterval(sId); stopMus(); endSfx();
         if (score > hiScore) hiScore = score;
         document.getElementById('endScore').textContent = 'SCORE: ' + score;
         draw(); canvas.classList.add('blur'); endOv.style.display = 'flex';
@@ -604,7 +610,7 @@
     }, 1000);
   }
   function resetGame() {
-    stopMus();
+    stopMus(); clearInterval(sId);
     state = 0; timer = 15; score = 0;
     pos.x = pos.y = vel.x = vel.y = cam.x = cam.y = joy.x = joy.y = 0;
     squirrels = [];
