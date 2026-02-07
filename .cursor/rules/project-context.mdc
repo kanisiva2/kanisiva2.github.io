@@ -1,0 +1,49 @@
+---
+description: Project context and conventions for the TartanHacks game
+alwaysApply: true
+---
+
+# TartanHacks - Scotty the Terrier Game
+
+## Project Overview
+
+A mobile-friendly HTML5 canvas game built for TartanHacks. The player controls Scotty the terrier, chasing squirrels and collecting dropped coins to reach a score of 100+ within 20 seconds.
+
+## Tech Stack
+
+- **Single-file HTML/CSS/JS** (`index.html`) — no build tools or frameworks
+- **HTML5 Canvas** for rendering (2D context)
+- **Virtual joystick** for touch/mouse input
+- Designed for mobile-first with `touch-action: none` and `user-scalable=no`
+
+## Architecture
+
+- All game logic lives in an IIFE inside `index.html`
+- Game loop runs at 60fps via `setInterval`
+- Camera follows the player (Scotty) with world-to-screen coordinate conversion
+- Squirrels use simple flee AI (flee when player is within 100px)
+- Coins despawn after 8 seconds
+
+## Key Constants
+
+- `GAME_DURATION`: 20 seconds
+- `SQUIRREL_COUNT`: 6
+- `SCOTTY_SIZE`: 36, `SQUIRREL_SIZE`: 28, `COIN_SIZE`: 20
+- Win condition: score >= 100
+
+## Build & Size Check
+
+When asked to check the byte size, run these commands and update the current size below:
+
+```bash
+tar -cf - index.html | brotli -q 11 -o app.tar.br
+stat -f %z app.tar.br
+```
+
+**Current compressed size: 1807 bytes**
+
+## Style Guide
+
+- Gold/amber UI theme (`#e8c547`, `#d4a84b`, `#b8860b`)
+- Dark HUD overlay with gradient backgrounds
+- Keep the game lightweight — no external dependencies
