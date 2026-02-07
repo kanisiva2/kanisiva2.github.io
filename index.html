@@ -70,8 +70,13 @@
     return { x: Math.cos(angle) * r, y: Math.sin(angle) * r, vx: 0, vy: 0 };
   }
   for (let i = 0; i < 8; i++) squirrels.push(spawnSquirrel());
-  let state = 0, timer = 30, tId = 0, score = 0, hiScore = 0;
+  let state = 0, timer = 20, tId = 0, score = 0, hiScore = 0;
   let fightEndTime = 0, fightTaps = 0, fightShake = 0;
+  let rewardEndTime = 0, rewardStartTime = 0, bonusSeconds = 0;
+  let rewardOverlay = false;
+  let timerFlashEndTime = 0;
+  const REWARD_DURATION_MS = 1650;
+  const REWARD_MOVE_MS = 1500;
   const FIGHT_DURATION_MS = 5000;
   const SQUIRREL_CX = 0.5, SQUIRREL_CY = 0.15, SQUIRREL_R = 0.22;
   const SCOTTY_CX = 0.8, SCOTTY_CY = 0.82, SCOTTY_R = 0.04;
@@ -103,7 +108,8 @@
   function endSfx(){if(!actx)return;var t=actx.currentTime+.4;[[71,.18],[67,.18],[64,.28],[57,.9]].forEach(function(n){var o=actx.createOscillator(),g=actx.createGain();o.type='triangle';o.frequency.value=mtof(n[0]);g.gain.setValueAtTime(.15,t);g.gain.linearRampToValueAtTime(.001,t+n[1]);o.connect(g);g.connect(actx.destination);o.start(t);o.stop(t+n[1]+.01);t+=n[1]})}
 
   const FONT = [[7,5,5,5,7],[2,6,2,2,2],[7,1,7,4,7],[7,1,7,1,7],[5,5,7,1,1],[7,4,7,1,7],[7,4,7,5,7],[7,1,1,1,1],[7,5,7,5,7],[7,5,7,1,7],[7,4,4,4,7],[7,5,7,6,5],[7,4,7,4,7],[5,5,7,5,5],[7,2,2,2,7],[0,2,0,2,0]];
-  function drawPx(chars, x, y, sz) {
+  function drawPx(chars, x, y, sz, fillColor) {
+    const fill = fillColor || '#e8c547';
     chars.forEach((d, di) => {
       if (d < 0) return;
       const ox = x + di * sz * 4;
@@ -112,7 +118,7 @@
         ctx.fillRect(ox + c * sz - 1, y + r * sz - 1, sz + 2, sz + 2);
       }});
       FONT[d].forEach((row, r) => { for (let c = 0; c < 3; c++) if (row & (4 >> c)) {
-        ctx.fillStyle = '#e8c547';
+        ctx.fillStyle = fill;
         ctx.fillRect(ox + c * sz, y + r * sz, sz, sz);
       }});
     });
@@ -256,12 +262,21 @@
           }
           return true;
         });
+        bonusSeconds = 1 + Math.min(4, Math.floor(fightTaps / 8));
         state = 1;
         joystickWrap.classList.remove('hidden');
+        rewardOverlay = true;
+        rewardStartTime = Date.now();
+        rewardEndTime = Date.now() + REWARD_DURATION_MS;
       }
     }
+    if (state === 1 && rewardOverlay && Date.now() >= rewardEndTime) {
+      timer += bonusSeconds;
+      rewardOverlay = false;
+      timerFlashEndTime = Date.now() + 500;
+    }
     animT++;
-    if (state < 2 || state === 3) draw();
+    if (state < 2 || state === 3 || state === 1) draw();
   }
 
   function draw() {
@@ -521,7 +536,7 @@
       while (ei < ents.length && ents[ei].y < (cy + 1) * CHUNK) drawEnt(ents[ei++]);
     }
     while (ei < ents.length) drawEnt(ents[ei++]);
-    drawPx([Math.floor(timer / 10), timer % 10], W - 50, 15, 5);
+    drawPx([Math.floor(timer / 10), timer % 10], W - 50, 15, 5, Date.now() < timerFlashEndTime ? 'rgb(40,120,50)' : undefined);
     const sn = score < 10 ? [score] : [...String(score)].map(Number);
     const sc = [5,10,0,11,12,15,-1,...sn];
     drawPx(sc, W - 15 - sc.length * 12, 48, 3);
@@ -529,6 +544,23 @@
       const hn = hiScore < 10 ? [hiScore] : [...String(hiScore)].map(Number);
       const hc = [13,14,15,-1,...hn];
       drawPx(hc, W - 15 - hc.length * 12, 68, 3);
+    }
+    if (rewardOverlay) {
+      const elapsed = Date.now() - rewardStartTime;
+      const t = Math.min(1, elapsed / REWARD_MOVE_MS);
+      const easeOut = 1 - (1 - t) * (1 - t);
+      const startX = W / 2, startY = H * 0.5;
+      const endX = W - 55, endY = 28;
+      const x = startX + (endX - startX) * easeOut;
+      const y = startY + (endY - startY) * easeOut;
+      ctx.fillStyle = 'rgb(40,120,50)';
+      ctx.font = '22px "Press Start 2P"';
+      ctx.textAlign = 'center';
+      ctx.fillText('+' + bonusSeconds + ' sec', x, y);
+      ctx.fillStyle = 'rgba(232,197,71,0.9)';
+      ctx.font = '14px "Press Start 2P"';
+      ctx.fillText(fightTaps + ' taps', W / 2, H * 0.38);
+      ctx.textAlign = 'left';
     }
   }
 
@@ -541,7 +573,7 @@
     joystickWrap.classList.remove('hidden');
     startMus();
     tId = setInterval(() => {
-      if (state === 3) return;
+      if (state === 3 || rewardOverlay) return;
       if (--timer <= 0) {
         timer = 0; state = 2; clearInterval(tId); stopMus(); endSfx();
         if (score > hiScore) hiScore = score;
@@ -552,7 +584,7 @@
   }
   function resetGame() {
     stopMus();
-    state = 0; timer = 30; score = 0;
+    state = 0; timer = 20; score = 0;
     pos.x = pos.y = vel.x = vel.y = cam.x = cam.y = joy.x = joy.y = 0;
     squirrels = [];
     for (let i = 0; i < 8; i++) squirrels.push(spawnSquirrel());
