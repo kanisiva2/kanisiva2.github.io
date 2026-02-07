@@ -66,7 +66,7 @@
   let cam = { x: 0, y: 0 };
   let joy = { x: 0, y: 0 };
   const SCOTTY_SPEED = 7, SQUIRREL_SPEED = 3;
-  const AF = 0.7, AL = 0.25, FR = 0.96, TILT = 0.75;
+  const AF = 0.7, AL = 0.35, FR = 0.93, TILT = 0.75;
   const CHUNK = 80, PIX = 10, PPC = CHUNK / PIX;
   const SPAWN_RADIUS = 1.8 * CHUNK;
   const SPAWN_RING = 40;
@@ -242,7 +242,7 @@
       if (hitTree(nx, pos.y)) { nx = pos.x; vel.x = 0; }
       if (hitTree(nx, ny)) { ny = pos.y; vel.y = 0; }
       pos.x = nx; pos.y = ny;
-      squirrels.forEach(sq => {
+      squirrels.forEach((sq, si) => {
         const dx = pos.x - sq.x, dy = pos.y - sq.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
         const cd = dist / CHUNK;
@@ -251,6 +251,13 @@
           const ux = dx / dist, uy = dy / dist;
           if (cd < 2.5) { tx -= ux * 1.2; ty -= uy * 1.2; }
           else if (cd > 4) { tx += ux * 0.6; ty += uy * 0.6; }
+        }
+        // Repel from other squirrels
+        for (let j = 0; j < squirrels.length; j++) {
+          if (j === si) continue;
+          const sdx = sq.x - squirrels[j].x, sdy = sq.y - squirrels[j].y;
+          const sd = Math.sqrt(sdx * sdx + sdy * sdy);
+          if (sd < 80 && sd > 0.1) { tx += sdx / sd * (1.5 - sd / 80); ty += sdy / sd * (1.5 - sd / 80); }
         }
         const tl = Math.sqrt(tx * tx + ty * ty);
         if (tl > 0) { sq.vx += tx / tl * 0.4; sq.vy += ty / tl * 0.4; }
@@ -306,7 +313,7 @@
     // Pickup powerup logic
     if (state === 1) {
       pickupTimer++;
-      if (pickupTimer >= 360) {
+      if (pickupTimer >= 300) {
         pickupTimer = 0;
         const angle = Math.random() * Math.PI * 2;
         const r = 100 + Math.random() * 200;
