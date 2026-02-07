@@ -10,15 +10,16 @@
     html, body { width: 100%; height: 100%; overflow: hidden; background: #1e1a14; }
     #gameBox { position: fixed; inset: 0; overflow: hidden; }
     #gameCanvas { display: block; width: 100%; height: 100%; }
-    #startOverlay { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 48px 24px 140px; background: rgba(0,0,0,0.25); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 25; cursor: pointer; font-family: 'Press Start 2P', monospace; -webkit-font-smoothing: none; image-rendering: pixelated; }
+    @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+    #startOverlay { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 32px; padding: 24px; background: rgba(0,0,0,0.25); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 25; cursor: pointer; font-family: 'Press Start 2P', monospace; -webkit-font-smoothing: none; image-rendering: pixelated; }
     #startOverlay.hidden { display: none !important; }
-    #startOverlay .gameTitle { font-size: clamp(14px, 5vw, 28px); color: #e8c547; text-shadow: 3px 3px 0 #5c4a20; }
-    #startOverlay .tapToPlay { font-size: clamp(14px, 4.5vw, 24px); color: #e8c547; text-shadow: 2px 2px 0 #5c4a20; }
+    #startOverlay .gameTitle { font-size: clamp(22px, 7vw, 42px); color: #e8c547; text-shadow: 3px 3px 0 #5c4a20; }
+    #startOverlay .tapToPlay { font-size: clamp(14px, 4.5vw, 24px); color: #fff; text-shadow: 2px 2px 0 rgba(0,0,0,0.4); animation: bounce 1s ease-in-out infinite; }
     #startOverlay { touch-action: manipulation; }
     #joystickWrap { position: absolute; bottom: 56px; left: 50%; transform: translateX(-50%); z-index: 30; }
     #joystickWrap.hidden { display: none !important; }
-    #joystickBase { width: 100px; height: 100px; border-radius: 50%; background: radial-gradient(circle, rgba(200,220,255,0.02) 0%, rgba(200,220,255,0.04) 40%, rgba(190,215,255,0.15) 70%, rgba(210,230,255,0.3) 88%, rgba(220,235,255,0.38) 100%); border: 2px solid rgba(200,220,255,0.3); touch-action: none; }
-    #joystickKnob { width: 44px; height: 44px; border-radius: 50%; background: radial-gradient(circle, rgba(200,220,255,0.03) 0%, rgba(200,220,255,0.06) 35%, rgba(190,215,255,0.18) 65%, rgba(210,230,255,0.33) 85%, rgba(220,235,255,0.42) 100%); border: 2px solid rgba(200,220,255,0.35); position: absolute; left: 28px; top: 28px; transition: transform .05s; }
+    #joystickBase { width: 120px; height: 120px; border-radius: 50%; background: radial-gradient(circle, rgba(200,220,255,0.02) 0%, rgba(200,220,255,0.04) 40%, rgba(190,215,255,0.15) 70%, rgba(210,230,255,0.3) 88%, rgba(220,235,255,0.38) 100%); border: 2px solid rgba(200,220,255,0.3); touch-action: none; }
+    #joystickKnob { width: 54px; height: 54px; border-radius: 50%; background: radial-gradient(circle, rgba(200,220,255,0.03) 0%, rgba(200,220,255,0.06) 35%, rgba(190,215,255,0.18) 65%, rgba(210,230,255,0.33) 85%, rgba(220,235,255,0.42) 100%); border: 2px solid rgba(200,220,255,0.35); position: absolute; left: 33px; top: 33px; transition: transform .05s; }
     .blur { filter: blur(4px); pointer-events: none; }
     #endOverlay { display: none; position: fixed; inset: 0; z-index: 40; background: rgba(255,255,255,0.35); align-items: center; justify-content: center; flex-direction: column; gap: 40px; }
     #playAgain { font: bold 6px monospace; transform: scale(4); -webkit-font-smoothing: none; color: #fff; background: rgba(0,0,0,0.6); padding: 3px 6px; border: 1px solid #fff; cursor: pointer; letter-spacing: 1px; }
@@ -56,7 +57,8 @@
   let vel = { x: 0, y: 0 };
   let cam = { x: 0, y: 0 };
   let joy = { x: 0, y: 0 };
-  const MSPD = 12, AF = 0.7, AL = 0.25, FR = 0.96, TILT = 0.75;
+  const SCOTTY_SPEED = 7, SQUIRREL_SPEED = 3;
+  const AF = 0.7, AL = 0.25, FR = 0.96, TILT = 0.75;
   const CHUNK = 80, PIX = 10, PPC = CHUNK / PIX;
   const SPAWN_RADIUS = 1.8 * CHUNK;
   const SPAWN_RING = 40;
@@ -67,8 +69,14 @@
     const r = SPAWN_RADIUS + (Math.random() - 0.5) * SPAWN_RING;
     return { x: Math.cos(angle) * r, y: Math.sin(angle) * r, vx: 0, vy: 0 };
   }
-  for (let i = 0; i < 3; i++) squirrels.push(spawnSquirrel());
+  for (let i = 0; i < 8; i++) squirrels.push(spawnSquirrel());
   let state = 0, timer = 30, tId = 0, score = 0, hiScore = 0;
+  let fightEndTime = 0, fightTaps = 0, fightShake = 0;
+  const FIGHT_DURATION_MS = 5000;
+  const SQUIRREL_CX = 0.5, SQUIRREL_CY = -0.1, SQUIRREL_R = 0.22;
+  const SCOTTY_CX = 0.8, SCOTTY_CY = 0.82, SCOTTY_R = 0.04;
+  const fightIdleData = [{"#2f2f2e":[[10,19],[11,19],[12,19],[13,19],[9,20],[14,20],[8,21],[15,21],[16,21],[17,21],[19,21],[20,21],[8,22],[10,22],[15,22],[16,22],[18,22],[20,22],[8,23],[9,23],[11,23],[15,23],[16,23],[20,23],[11,24],[14,24],[16,24],[21,24],[10,25],[13,25],[16,25],[18,25],[21,25],[10,26],[12,26],[17,26],[21,26],[10,27],[12,27],[17,27],[18,27],[21,27],[11,28],[12,28],[14,28],[15,28],[21,28],[12,29],[16,29],[17,29],[20,29],[13,30],[14,30],[17,30],[19,30],[14,31],[15,31],[16,31],[17,31],[18,31],[19,31]],"#a67354":[[10,20],[11,20],[12,20],[9,21],[10,21],[11,21],[12,21],[9,22],[11,22],[17,22],[17,23],[20,26]],"#825235":[[13,20],[13,21],[12,22],[13,22],[12,23],[13,23],[18,23],[19,23],[12,24],[17,24],[18,24],[19,24],[20,24],[15,25],[17,25],[19,25],[20,25],[14,26],[15,26],[16,26],[18,26],[19,26],[13,27],[14,27],[15,27],[16,27],[13,28],[16,28],[17,28],[14,29],[15,29],[16,30],[18,30]],"#694129":[[14,21],[14,22],[19,22],[14,23],[13,24],[15,24],[11,25],[12,25],[14,25],[11,26],[13,26],[11,27],[20,28],[13,29],[15,30]],"#c2bdbd":[[19,27]],"#e4e4e4":[[20,27]],"#b46828":[[18,28],[19,28]],"#da8238":[[18,29],[19,29]]},{"#2f2f2e":[[10,19],[11,19],[12,19],[13,19],[9,20],[14,20],[8,21],[15,21],[8,22],[10,22],[15,22],[16,22],[17,22],[19,22],[20,22],[8,23],[9,23],[11,23],[15,23],[16,23],[18,23],[20,23],[11,24],[14,24],[16,24],[20,24],[10,25],[13,25],[16,25],[21,25],[10,26],[12,26],[16,26],[18,26],[21,26],[10,27],[12,27],[17,27],[21,27],[11,28],[12,28],[14,28],[15,28],[18,28],[21,28],[12,29],[16,29],[17,29],[20,29],[13,30],[14,30],[17,30],[19,30],[14,31],[15,31],[16,31],[17,31],[18,31],[19,31]],"#a67354":[[10,20],[11,20],[12,20],[9,21],[10,21],[11,21],[12,21],[9,22],[11,22],[17,23],[17,24],[20,27]],"#825235":[[13,20],[13,21],[12,22],[13,22],[12,23],[13,23],[12,24],[18,24],[19,24],[15,25],[17,25],[18,25],[19,25],[20,25],[14,26],[15,26],[17,26],[19,26],[20,26],[13,27],[14,27],[15,27],[16,27],[18,27],[19,27],[13,28],[16,28],[17,28],[14,29],[15,29],[16,30],[18,30]],"#694129":[[14,21],[14,22],[14,23],[19,23],[13,24],[15,24],[11,25],[12,25],[14,25],[11,26],[13,26],[11,27],[13,29],[15,30]],"#c2bdbd":[[19,28]],"#e4e4e4":[[20,28]],"#da8238":[[18,29],[19,29]]}];
+  const fightIdleFrames = cleanFrames(fightIdleData);
   let sqMove = null, animT = 0;
   const SQP = 2, SQW = 32, SQH = 32;
   function cleanFrames(frames) {
@@ -198,7 +206,7 @@
       vel.x = vel.x * FR + ax;
       vel.y = vel.y * FR + ay;
       const s2 = Math.sqrt(vel.x * vel.x + vel.y * vel.y);
-      if (s2 > MSPD) { vel.x = vel.x / s2 * MSPD; vel.y = vel.y / s2 * MSPD; }
+      if (s2 > SCOTTY_SPEED) { vel.x = vel.x / s2 * SCOTTY_SPEED; vel.y = vel.y / s2 * SCOTTY_SPEED; }
       let nx = pos.x + vel.x, ny = pos.y + vel.y;
       if (hitTree(nx, pos.y)) { nx = pos.x; vel.x = 0; }
       if (hitTree(nx, ny)) { ny = pos.y; vel.y = 0; }
@@ -217,23 +225,113 @@
         if (tl > 0) { sq.vx += tx / tl * 0.4; sq.vy += ty / tl * 0.4; }
         sq.vx *= 0.95; sq.vy *= 0.95;
         const ss = Math.sqrt(sq.vx * sq.vx + sq.vy * sq.vy);
-        if (ss > 8) { sq.vx = sq.vx / ss * 8; sq.vy = sq.vy / ss * 8; }
+        if (ss > SQUIRREL_SPEED) { sq.vx = sq.vx / ss * SQUIRREL_SPEED; sq.vy = sq.vy / ss * SQUIRREL_SPEED; }
         let snx = sq.x + sq.vx, sny = sq.y + sq.vy;
         if (hitTree(snx, sq.y)) { snx = sq.x; sq.vx *= -0.5; }
         if (hitTree(snx, sny)) { sny = sq.y; sq.vy *= -0.5; }
         sq.x = snx; sq.y = sny;
         if (dist < 28) sq.caught = true;
       });
-      squirrels = squirrels.filter(sq => { if (sq.caught) { score++; return false; } return true; });
+      const anyCaught = squirrels.some(sq => sq.caught);
+      if (anyCaught) {
+        state = 3;
+        fightEndTime = Date.now() + FIGHT_DURATION_MS;
+        fightTaps = 0;
+        fightShake = 0;
+        joystickWrap.classList.add('hidden');
+      } else {
+        squirrels = squirrels.filter(sq => { if (sq.caught) { score++; return false; } return true; });
+      }
       cam.x += (pos.x - cam.x) * 0.1;
       cam.y += (pos.y - cam.y) * 0.1;
     }
+    if (state === 3) {
+      fightShake *= 0.82;
+      if (fightShake < 0.5) fightShake = 0;
+      if (Date.now() >= fightEndTime) {
+        squirrels = squirrels.filter(sq => {
+          if (sq.caught) {
+            score += 1 + Math.min(fightTaps, 30);
+            return false;
+          }
+          return true;
+        });
+        state = 1;
+        joystickWrap.classList.remove('hidden');
+      }
+    }
     animT++;
-    if (state < 2) draw();
+    if (state < 2 || state === 3) draw();
   }
 
   function draw() {
     ctx.imageSmoothingEnabled = false;
+    if (state === 3) {
+      const shakeX = fightShake ? (Math.random() - 0.5) * 2 * fightShake : 0;
+      const shakeY = fightShake ? (Math.random() - 0.5) * 2 * fightShake : 0;
+      ctx.save();
+      if (fightShake) ctx.translate(shakeX, shakeY);
+      ctx.fillStyle = '#2a3520';
+      ctx.fillRect(0, 0, W, H);
+      const sqX = W * SQUIRREL_CX, sqY = H * SQUIRREL_CY, sqR = Math.min(W, H) * SQUIRREL_R;
+      if (fightIdleFrames && fightIdleFrames.length) {
+        const fi = (animT / 8 | 0) % fightIdleFrames.length;
+        const size = Math.min(W, H) * 1.45;
+        const fightSQP = size / 32;
+        const ox = sqX - size / 2;
+        const oy = sqY - size / 2;
+        const fr = fightIdleFrames[fi];
+        for (const c in fr) {
+          ctx.fillStyle = c;
+          const pts = fr[c];
+          for (let i = 0; i < pts.length; i++) {
+            const p = pts[i];
+            const px = Math.floor(ox + p[0] * fightSQP);
+            const py = Math.floor(oy + p[1] * fightSQP);
+            const cell = Math.ceil(fightSQP) + 1;
+            ctx.fillRect(px, py, cell, cell);
+          }
+        }
+        const pulse = 0.85 + Math.sin(animT * 0.15) * 0.15;
+        const ringR = size * 0.15;
+        const ringY = sqY + size * 0.32;
+        ctx.strokeStyle = 'rgba(255,220,80,0.9)';
+        ctx.lineWidth = 4;
+        ctx.beginPath(); ctx.arc(sqX, ringY, ringR * pulse, 0, Math.PI * 2); ctx.stroke();
+        ctx.strokeStyle = 'rgba(255,180,0,0.6)';
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(sqX, ringY, ringR * pulse + 6, 0, Math.PI * 2); ctx.stroke();
+      } else {
+        ctx.fillStyle = '#5a4a3a';
+        ctx.beginPath(); ctx.ellipse(sqX, sqY + sqR * 0.3, sqR * 1.1, sqR * 0.9, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#4a3a2a';
+        ctx.beginPath(); ctx.arc(sqX, sqY - sqR * 0.5, sqR * 0.6, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#000';
+        ctx.beginPath(); ctx.arc(sqX - sqR * 0.25, sqY - sqR * 0.6, sqR * 0.12, 0, Math.PI * 2); ctx.arc(sqX + sqR * 0.25, sqY - sqR * 0.6, sqR * 0.12, 0, Math.PI * 2); ctx.fill();
+      }
+      const secLeft = Math.ceil((fightEndTime - Date.now()) / 1000);
+      const bounceY = Math.abs(Math.sin(animT * 0.12)) * 12;
+      ctx.fillStyle = '#e8c547';
+      ctx.font = '26px "Press Start 2P"';
+      ctx.textAlign = 'center';
+      ctx.fillText('Tap the squirrel!', W / 2, H * 0.72 + bounceY);
+      ctx.fillStyle = 'rgba(232,197,71,0.9)';
+      ctx.textAlign = 'left';
+      const rowCenter = W / 2;
+      const leftX = rowCenter - 110;
+      const rightX = rowCenter + 50;
+      ctx.font = '28px "Press Start 2P"';
+      ctx.fillText(String(fightTaps), leftX, H * 0.84);
+      ctx.font = '11px "Press Start 2P"';
+      ctx.fillText('taps', leftX + 52, H * 0.84);
+      ctx.font = '28px "Press Start 2P"';
+      ctx.fillText(String(secLeft), rightX, H * 0.84);
+      ctx.font = '11px "Press Start 2P"';
+      ctx.fillText('s left', rightX + 44, H * 0.84);
+      ctx.textAlign = 'left';
+      ctx.restore();
+      return;
+    }
     const cx0 = Math.floor((cam.x - W / 2) / CHUNK) - 1;
     const cx1 = Math.ceil((cam.x + W / 2) / CHUNK) + 1;
     const cy0 = Math.floor((cam.y - H / (2 * TILT)) / CHUNK) - 1;
@@ -452,6 +550,7 @@
     joystickWrap.classList.remove('hidden');
     startMus();
     tId = setInterval(() => {
+      if (state === 3) return;
       if (--timer <= 0) {
         timer = 0; state = 2; clearInterval(tId); stopMus(); endSfx();
         if (score > hiScore) hiScore = score;
@@ -465,7 +564,7 @@
     state = 0; timer = 30; score = 0;
     pos.x = pos.y = vel.x = vel.y = cam.x = cam.y = joy.x = joy.y = 0;
     squirrels = [];
-    for (let i = 0; i < 3; i++) squirrels.push(spawnSquirrel());
+    for (let i = 0; i < 8; i++) squirrels.push(spawnSquirrel());
     for (const k in chunks) delete chunks[k];
     canvas.classList.remove('blur'); endOv.style.display = 'none';
     startOv.classList.remove('hidden');
@@ -474,7 +573,18 @@
   }
   document.getElementById('playAgain').addEventListener('click', resetGame);
 
-  const baseR = 50, knobMax = 28;
+  const baseR = 60, knobMax = 33;
+
+  function isTapOnSquirrel(clientX, clientY) {
+    const rect = canvas.getBoundingClientRect();
+    const canX = (clientX - rect.left) * (W / rect.width);
+    const canY = (clientY - rect.top) * (H / rect.height);
+    const sqX = W * SQUIRREL_CX, sqY = H * SQUIRREL_CY;
+    const size = Math.min(W, H) * 1.45;
+    const hitR = size / 2;
+    const dx = canX - sqX, dy = canY - sqY;
+    return dx * dx + dy * dy <= hitR * hitR;
+  }
 
   function update(cx, cy) {
     const r = jBase.getBoundingClientRect();
@@ -501,15 +611,22 @@
 
   startOv.addEventListener('click', function(e) { e.preventDefault(); if (state === 0) startGame(); }, true);
   startOv.addEventListener('touchstart', function(e) { if (state === 0) { e.preventDefault(); startGame(); } }, { passive: false });
-  canvas.addEventListener('touchstart', e => { e.preventDefault(); if (state === 2) return; if (!state) startGame(); update(e.touches[0].clientX, e.touches[0].clientY); }, { passive: false });
-  canvas.addEventListener('touchmove', e => { e.preventDefault(); update(e.touches[0].clientX, e.touches[0].clientY); }, { passive: false });
-  canvas.addEventListener('touchend', reset);
-  canvas.addEventListener('touchcancel', reset);
+  canvas.addEventListener('touchstart', e => {
+    e.preventDefault();
+    if (state === 2) return;
+    if (state === 3) { if (isTapOnSquirrel(e.touches[0].clientX, e.touches[0].clientY)) { fightTaps++; fightShake = 14; } return; }
+    if (!state) startGame();
+    update(e.touches[0].clientX, e.touches[0].clientY);
+  }, { passive: false });
+  canvas.addEventListener('touchmove', e => { e.preventDefault(); if (state !== 3) update(e.touches[0].clientX, e.touches[0].clientY); }, { passive: false });
+  canvas.addEventListener('touchend', () => { if (state !== 3) reset(); });
+  canvas.addEventListener('touchcancel', () => { if (state !== 3) reset(); });
   canvas.addEventListener('mousedown', e => {
     if (state === 2) return;
+    if (state === 3) { if (isTapOnSquirrel(e.clientX, e.clientY)) { fightTaps++; fightShake = 14; } return; }
     if (!state) startGame();
     update(e.clientX, e.clientY);
-    const mv = e => update(e.clientX, e.clientY);
+    const mv = ev => { if (state !== 3) update(ev.clientX, ev.clientY); };
     const up = () => { reset(); removeEventListener('mousemove', mv); removeEventListener('mouseup', up); };
     addEventListener('mousemove', mv); addEventListener('mouseup', up);
   });
