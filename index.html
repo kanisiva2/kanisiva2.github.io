@@ -13,7 +13,7 @@
     @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
     #startOverlay { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 32px; padding: 24px; background: rgba(0,0,0,0.25); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 25; cursor: pointer; font-family: 'Press Start 2P', monospace; -webkit-font-smoothing: none; image-rendering: pixelated; }
     #startOverlay.hidden { display: none !important; }
-    #startOverlay .gameTitle { font-size: clamp(22px, 7vw, 42px); color: #e8c547; text-shadow: 3px 3px 0 #5c4a20; }
+    #startOverlay .gameTitle { font-size: clamp(22px, 7vw, 42px); color: #e8c547; text-shadow: 3px 3px 0 #5c4a20; text-align: center; }
     #startOverlay .tagline { font-size: clamp(12px, 3.5vw, 20px); color: #fff; text-shadow: 2px 2px 0 rgba(0,0,0,0.4); }
     #startOverlay .tapToPlay { font-size: clamp(14px, 4.5vw, 24px); color: #fff; text-shadow: 2px 2px 0 rgba(0,0,0,0.4); animation: bounce 1s ease-in-out infinite; margin-top: 28px; }
     #startOverlay { touch-action: manipulation; }
@@ -66,22 +66,22 @@
   let cam = { x: 0, y: 0 };
   let joy = { x: 0, y: 0 };
   const SCOTTY_SPEED = 7, SQUIRREL_SPEED = 3;
-  const AF = 0.7, AL = 0.35, FR = 0.93, TILT = 0.75;
+  const AF = 0.7, AL = 0.4, FR = 0.90, TILT = 0.75;
   const CHUNK = 80, PIX = 10, PPC = CHUNK / PIX;
   const SPAWN_RADIUS = 1.8 * CHUNK;
   const SPAWN_RING = 40;
   const chunks = {};
   let squirrels = [];
-  function sqType() { const r = Math.random(); return r < 0.5 ? 0 : r < 0.75 ? 1 : 2; }
+  function sqType() { const r = Math.random(); return r < 0.5 ? 0 : r < 0.85 ? 1 : 2; }
   function spawnSquirrel() {
     const angle = Math.random() * Math.PI * 2;
     const r = SPAWN_RADIUS + (Math.random() - 0.5) * SPAWN_RING;
-    return { x: Math.cos(angle) * r, y: Math.sin(angle) * r, vx: 0, vy: 0, st: sqType(), jt: 0 };
+    return { x: Math.cos(angle) * r, y: Math.sin(angle) * r, vx: 0, vy: 0, st: sqType(), jt: 0, ang: Math.random() * Math.PI * 2 };
   }
   function spawnOffscreen() {
     const a = Math.random() * Math.PI * 2, dx = Math.cos(a), dy = Math.sin(a);
     const d = Math.max(W / 2, H / (2 * TILT)) + CHUNK * 2;
-    return { x: cam.x + dx * d, y: cam.y + dy * d, vx: -dx * 4, vy: -dy * 4, st: sqType(), jt: 0 };
+    return { x: cam.x + dx * d, y: cam.y + dy * d, vx: -dx * 4, vy: -dy * 4, st: sqType(), jt: 0, ang: Math.atan2(-dy, -dx) };
   }
   for (let i = 0; i < 8; i++) squirrels.push(spawnSquirrel());
   let state = 0, timer = 15, tId = 0, sId = 0, score = 0, hiScore = 0;
@@ -274,7 +274,14 @@
           if (sd < 80 && sd > 0.1) { tx += sdx / sd * (1.5 - sd / 80); ty += sdy / sd * (1.5 - sd / 80); }
         }
         const tl = Math.sqrt(tx * tx + ty * ty);
-        if (tl > 0) { sq.vx += tx / tl * tp[1]; sq.vy += ty / tl * tp[1]; }
+        if (sq.st === 2 && tl > 0) {
+          const da = Math.atan2(ty, tx);
+          let diff = da - sq.ang;
+          if (diff > Math.PI) diff -= Math.PI * 2;
+          if (diff < -Math.PI) diff += Math.PI * 2;
+          sq.ang += Math.max(-0.035, Math.min(0.035, diff));
+          sq.vx += Math.cos(sq.ang) * tp[1]; sq.vy += Math.sin(sq.ang) * tp[1];
+        } else if (tl > 0) { sq.vx += tx / tl * tp[1]; sq.vy += ty / tl * tp[1]; }
         sq.vx *= tp[2]; sq.vy *= tp[2];
         const ss = Math.sqrt(sq.vx * sq.vx + sq.vy * sq.vy);
         if (ss > tp[0]) { sq.vx = sq.vx / ss * tp[0]; sq.vy = sq.vy / ss * tp[0]; }
@@ -295,7 +302,7 @@
         catchSfx();
         if(mGn){mGn.gain.cancelScheduledValues(actx.currentTime);mGn.gain.setValueAtTime(mGn.gain.value,actx.currentTime);mGn.gain.linearRampToValueAtTime(.06,actx.currentTime+.3)}
       } else {
-        squirrels = squirrels.filter(sq => { if (sq.caught) { score++; return false; } return true; });
+        squirrels = squirrels.filter(sq => { if (sq.caught) { score += sq.st === 2 ? 3 : 1; return false; } return true; });
       }
       cam.x += (pos.x - cam.x) * 0.1;
       cam.y += (pos.y - cam.y) * 0.1;
@@ -306,7 +313,7 @@
       if (Date.now() >= fightEndTime) {
         squirrels = squirrels.filter(sq => {
           if (sq.caught) {
-            score += 1 + Math.min(fightTaps, 30);
+            score += (sq.st === 2 ? 3 : 1) + Math.min(fightTaps, 30);
             return false;
           }
           return true;
