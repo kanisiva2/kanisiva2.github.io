@@ -66,21 +66,22 @@
   let cam = { x: 0, y: 0 };
   let joy = { x: 0, y: 0 };
   const SCOTTY_SPEED = 7, SQUIRREL_SPEED = 3;
-  const AF = 0.7, AL = 0.25, FR = 0.96, TILT = 0.75;
+  const AF = 0.7, AL = 0.35, FR = 0.93, TILT = 0.75;
   const CHUNK = 80, PIX = 10, PPC = CHUNK / PIX;
   const SPAWN_RADIUS = 1.8 * CHUNK;
   const SPAWN_RING = 40;
   const chunks = {};
   let squirrels = [];
+  function sqType() { const r = Math.random(); return r < 0.5 ? 0 : r < 0.75 ? 1 : 2; }
   function spawnSquirrel() {
     const angle = Math.random() * Math.PI * 2;
     const r = SPAWN_RADIUS + (Math.random() - 0.5) * SPAWN_RING;
-    return { x: Math.cos(angle) * r, y: Math.sin(angle) * r, vx: 0, vy: 0 };
+    return { x: Math.cos(angle) * r, y: Math.sin(angle) * r, vx: 0, vy: 0, st: sqType(), jt: 0 };
   }
   function spawnOffscreen() {
     const a = Math.random() * Math.PI * 2, dx = Math.cos(a), dy = Math.sin(a);
     const d = Math.max(W / 2, H / (2 * TILT)) + CHUNK * 2;
-    return { x: cam.x + dx * d, y: cam.y + dy * d, vx: -dx * 4, vy: -dy * 4 };
+    return { x: cam.x + dx * d, y: cam.y + dy * d, vx: -dx * 4, vy: -dy * 4, st: sqType(), jt: 0 };
   }
   for (let i = 0; i < 8; i++) squirrels.push(spawnSquirrel());
   let state = 0, timer = 15, tId = 0, sId = 0, score = 0, hiScore = 0;
@@ -242,26 +243,47 @@
       if (hitTree(nx, pos.y)) { nx = pos.x; vel.x = 0; }
       if (hitTree(nx, ny)) { ny = pos.y; vel.y = 0; }
       pos.x = nx; pos.y = ny;
-      squirrels.forEach(sq => {
+      squirrels.forEach((sq, si) => {
         const dx = pos.x - sq.x, dy = pos.y - sq.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
         const cd = dist / CHUNK;
+        // Type params: [maxSpeed, accel, friction, fleeStr]
+        const tp = sq.st === 1 ? [3, 0.4, 0.95, 1.2] : sq.st === 2 ? [5, 0.6, 0.98, 1.6] : [3, 0.4, 0.95, 1.2];
         let tx = (Math.random() - 0.5) * 0.6, ty = (Math.random() - 0.5) * 0.6;
-        if (dist > 1) {
+        // Big bunny: random jumps instead of constant flee
+        if (sq.st === 1) {
+          if (sq.jt > 0) { sq.jt--; }
+          else if (cd < 2.5 && dist > 1) {
+            const ux = dx / dist, uy = dy / dist;
+            sq.vx = -ux * 12; sq.vy = -uy * 12;
+            sq.jt = 30 + (Math.random() * 20 | 0);
+          }
+        }
+        if (sq.st !== 1 && dist > 1) {
           const ux = dx / dist, uy = dy / dist;
-          if (cd < 2.5) { tx -= ux * 1.2; ty -= uy * 1.2; }
+          if (cd < 2.5) { tx -= ux * tp[3]; ty -= uy * tp[3]; }
           else if (cd > 4) { tx += ux * 0.6; ty += uy * 0.6; }
         }
+        // Small squirrels: less random wandering (harder to turn)
+        if (sq.st === 2) { tx *= 0.25; ty *= 0.25; }
+        // Repel from other squirrels
+        for (let j = 0; j < squirrels.length; j++) {
+          if (j === si) continue;
+          const sdx = sq.x - squirrels[j].x, sdy = sq.y - squirrels[j].y;
+          const sd = Math.sqrt(sdx * sdx + sdy * sdy);
+          if (sd < 80 && sd > 0.1) { tx += sdx / sd * (1.5 - sd / 80); ty += sdy / sd * (1.5 - sd / 80); }
+        }
         const tl = Math.sqrt(tx * tx + ty * ty);
-        if (tl > 0) { sq.vx += tx / tl * 0.4; sq.vy += ty / tl * 0.4; }
-        sq.vx *= 0.95; sq.vy *= 0.95;
+        if (tl > 0) { sq.vx += tx / tl * tp[1]; sq.vy += ty / tl * tp[1]; }
+        sq.vx *= tp[2]; sq.vy *= tp[2];
         const ss = Math.sqrt(sq.vx * sq.vx + sq.vy * sq.vy);
-        if (ss > SQUIRREL_SPEED) { sq.vx = sq.vx / ss * SQUIRREL_SPEED; sq.vy = sq.vy / ss * SQUIRREL_SPEED; }
+        if (ss > tp[0]) { sq.vx = sq.vx / ss * tp[0]; sq.vy = sq.vy / ss * tp[0]; }
         let snx = sq.x + sq.vx, sny = sq.y + sq.vy;
         if (hitTree(snx, sq.y)) { snx = sq.x; sq.vx *= -0.5; }
         if (hitTree(snx, sny)) { sny = sq.y; sq.vy *= -0.5; }
         sq.x = snx; sq.y = sny;
-        if (dist < 28 * powerScale) sq.caught = true;
+        const catchR = sq.st === 1 ? 35 : sq.st === 2 ? 22 : 28;
+        if (dist < catchR * powerScale) sq.caught = true;
       });
       const anyCaught = squirrels.some(sq => sq.caught);
       if (anyCaught) {
@@ -306,7 +328,7 @@
     // Pickup powerup logic
     if (state === 1) {
       pickupTimer++;
-      if (pickupTimer >= 360) {
+      if (pickupTimer >= 300) {
         pickupTimer = 0;
         const angle = Math.random() * Math.PI * 2;
         const r = 100 + Math.random() * 200;
@@ -534,16 +556,21 @@
         ctx.fillRect(s.x + dx * P, s.y - dy * P, P, P);
       });
     }
-    function drawSqFrame(frame, x, y, flip) {
-      const ox = x - (SQW * SQP) / 2;
-      const oy = y - SQH * SQP + 6;
+    function drawSqFrame(frame, x, y, flip, scale, tint) {
+      const s = scale || 1;
+      const sp = SQP * s;
+      const ox = x - (SQW * sp) / 2;
+      const oy = y - SQH * sp + 6 * s;
       for (const c in frame) {
-        ctx.fillStyle = c;
+        if (tint) {
+          const r = parseInt(c.slice(1,3),16), g = parseInt(c.slice(3,5),16), b = parseInt(c.slice(5,7),16);
+          ctx.fillStyle = 'rgb(' + Math.min(255, r + tint[0] | 0) + ',' + Math.min(255, g + tint[1] | 0) + ',' + Math.min(255, b + tint[2] | 0) + ')';
+        } else ctx.fillStyle = c;
         const pts = frame[c];
         for (let i = 0; i < pts.length; i++) {
           const p = pts[i];
           const px = flip ? (SQW - 1 - p[0]) : p[0];
-          ctx.fillRect(ox + px * SQP, oy + p[1] * SQP, SQP, SQP);
+          ctx.fillRect(ox + px * sp, oy + p[1] * sp, Math.ceil(sp), Math.ceil(sp));
         }
       }
     }
@@ -585,12 +612,23 @@
       if (e.t === 2) { drawPickup(e.meat); return; }
       const sc = toScreen(e.x, e.y);
       if (e.t) {
+        const st = e.st || 0;
+        const sqS = st === 1 ? 1.5 : st === 2 ? 0.75 : 1;
+        const tint = st === 1 ? [-30,-30,-20] : st === 2 ? [50,50,60] : null;
         ctx.fillStyle = 'rgba(0,0,0,0.18)';
-        ctx.beginPath(); ctx.ellipse(sc.x, sc.y + 8, 12, 4, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(sc.x, sc.y + 8, 12 * sqS, 4 * sqS, 0, 0, Math.PI * 2); ctx.fill();
         if (sqMove) {
           const fi = (animT / 6 | 0) % sqMove.length;
           const flip = e.vx < -0.05;
-          drawSqFrame(sqMove[fi], sc.x, sc.y, flip);
+          drawSqFrame(sqMove[fi], sc.x, sc.y, flip, sqS, tint);
+          if (st === 2) {
+            for (let i = 0; i < 2; i++) {
+              const sx = sc.x + (Math.random() - 0.5) * 20, sy = sc.y + (Math.random() - 0.5) * 16 - 8;
+              const a = 0.3 + Math.random() * 0.3;
+              ctx.fillStyle = 'rgba(180,230,255,' + a + ')';
+              ctx.fillRect(sx, sy, 2, 2);
+            }
+          }
         } else {
           ctx.save(); ctx.translate(sc.x, sc.y);
           ctx.fillStyle = '#4a8';
@@ -625,7 +663,7 @@
       }
     }
     const ents = [{x: pos.x, y: pos.y, t: 0, vx: vel.x, vy: vel.y}];
-    squirrels.forEach(sq => ents.push({x: sq.x, y: sq.y, t: 1, vx: sq.vx, vy: sq.vy}));
+    squirrels.forEach(sq => ents.push({x: sq.x, y: sq.y, t: 1, vx: sq.vx, vy: sq.vy, st: sq.st}));
     pickups.forEach(m => ents.push({x: m.x, y: m.y, t: 2, meat: m}));
     ents.sort((a, b) => a.y - b.y);
     let ei = 0;
