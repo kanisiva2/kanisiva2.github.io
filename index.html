@@ -10,18 +10,61 @@
     #wrap { position: fixed; inset: 0; width: 100%; height: 100%; }
     #gameBox { position: absolute; inset: 0; width: 100%; height: 100%; overflow: hidden; background: #5a8c4a; }
     #gameCanvas { display: block; width: 100%; height: 100%; background: #5a8c4a; }
+    #hud { position: absolute; top: 0; left: 0; right: 0; display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: linear-gradient(180deg, rgba(0,0,0,.8), rgba(0,0,0,.4)); font-size: 20px; font-weight: bold; z-index: 10; }
+    #hud .score { background: linear-gradient(135deg, #d4a84b, #b8860b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    #hud .timer { color: #f5e6d3; }
+    #hud .timer.warn { color: #e07c4a; animation: pulse .5s ease-in-out infinite alternate; }
+    @keyframes pulse { to { opacity: .7; } }
     #joystickWrap { position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 30; }
     #joystickBase { width: 100px; height: 100px; border-radius: 50%; background: radial-gradient(circle at 30% 30%, #555, #2a2a2a); border: 3px solid rgba(100,100,100,.6); box-shadow: inset 0 0 20px rgba(0,0,0,.5); display: flex; align-items: center; justify-content: center; touch-action: none; }
     #joystickKnob { width: 44px; height: 44px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #e8c547, #d4a84b, #b8860b); box-shadow: 0 4px 12px rgba(0,0,0,.4); position: absolute; transition: transform .05s; }
+    #overlay { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 20; background: linear-gradient(180deg, rgba(120,80,40,.9), rgba(40,35,30,.95)); text-align: center; padding: 24px; }
+    #overlay h1 { font-size: 28px; margin-bottom: 4px; background: linear-gradient(90deg, #e8c547, #f0d050, #d4a84b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    #overlay h2 { font-size: 18px; color: rgba(245,230,211,.8); margin-bottom: 16px; }
+    #overlay .sub { color: rgba(245,230,211,.7); font-size: 14px; margin-bottom: 20px; max-width: 260px; line-height: 1.5; }
+    .btn { background: linear-gradient(135deg, #e8c547, #d4a84b); color: #1a1510; font-weight: 700; padding: 14px 28px; border: none; border-radius: 9999px; font-size: 18px; text-transform: uppercase; letter-spacing: .1em; cursor: pointer; box-shadow: 0 4px 20px rgba(212,168,75,.5); }
+    .btn:active { transform: scale(.95); }
+    #overlay .scoreBox { background: rgba(0,0,0,.3); border-radius: 16px; padding: 16px 32px; margin: 16px 0; }
+    #overlay .scoreBox .label { font-size: 12px; color: rgba(245,230,211,.6); }
+    #overlay .scoreBox .val { font-size: 36px; font-weight: bold; }
+    .hidden { display: none !important; }
   </style>
 </head>
 <body>
   <div id="wrap">
     <div id="gameBox">
       <canvas id="gameCanvas"></canvas>
-      <div id="joystickWrap">
+      <div id="hud" class="hidden">
+        <span class="score">🪙 <span id="scoreVal">0</span></span>
+        <span id="timerEl" class="timer">⏱️ 0:20</span>
+      </div>
+      <div id="joystickWrap" class="hidden">
         <div id="joystickBase">
           <div id="joystickKnob"></div>
+        </div>
+      </div>
+      <div id="overlay">
+        <div id="startScreen">
+          <h1>SCOTTY THE TERRIER</h1>
+          <h2>Chase the Squirrels!</h2>
+          <div style="display:flex;justify-content:center;gap:24px;margin:16px 0;">
+            <div><div style="font-size:40px;">🐕</div><div class="sub">You: Scotty</div></div>
+            <div style="align-self:center;font-size:20px;">→</div>
+            <div><div style="font-size:40px;">🐿️</div><div class="sub">Chase: Squirrels</div></div>
+          </div>
+          <p class="sub">You control Scotty the terrier. Chase squirrels, collect dropped coins. Score 100+ to win!</p>
+          <button class="btn" id="btnStart">TAP TO START</button>
+          <p class="sub" style="margin-top:12px;">⏱️ 20 seconds</p>
+        </div>
+        <div id="endScreen" class="hidden">
+          <div id="endIcon" style="font-size:48px;margin-bottom:8px;">🏆</div>
+          <h1 id="endTitle">BANK SECURED!</h1>
+          <p id="endMsg" class="sub" style="margin-bottom:12px;">Great job, Scotty!</p>
+          <div class="scoreBox">
+            <div class="label">FINAL SCORE</div>
+            <div class="val">🪙 <span id="endScore">0</span></div>
+          </div>
+          <button class="btn" id="btnAgain">PLAY AGAIN</button>
         </div>
       </div>
     </div>
@@ -29,6 +72,8 @@
   <script>
 (function () {
   let GAME_WIDTH = window.innerWidth, GAME_HEIGHT = window.innerHeight;
+  const SCOTTY_SIZE = 36, SQUIRREL_SIZE = 28, COIN_SIZE = 20;
+  const GAME_DURATION = 20, SQUIRREL_COUNT = 6, SPAWN_RANGE = 300;
 
   const canvas = document.getElementById('gameCanvas');
   const ctx = canvas.getContext('2d');
@@ -39,27 +84,103 @@
     canvas.width = GAME_WIDTH;
     canvas.height = GAME_HEIGHT;
   }
-  window.addEventListener('resize', function() { resize(); draw(); });
+  window.addEventListener('resize', function() {
+    resize();
+    if (phase === 'playing') draw();
+  });
   resize();
-
+  const hud = document.getElementById('hud');
+  const overlay = document.getElementById('overlay');
+  const startScreen = document.getElementById('startScreen');
+  const endScreen = document.getElementById('endScreen');
   const joystickBase = document.getElementById('joystickBase');
   const joystickKnob = document.getElementById('joystickKnob');
+  const joystickWrap = document.getElementById('joystickWrap');
 
+  let phase = 'start';
   let scottyPos = { x: 0, y: 0 };
   let scottyAngle = 0;
   let cameraOffset = { x: 0, y: 0 };
+  let squirrels = [];
+  let coins = [];
+  let score = 0;
+  let timeLeft = GAME_DURATION;
   let joystick = { x: 0, y: 0 };
+  let coinId = 0;
   const SCALE = 2;
-  const TILT = 0.55;
+  const SQUIRREL_MAX_SPEED = 2.3;
 
+  function randomPosAround(center) {
+    return {
+      x: center.x + (Math.random() - 0.5) * SPAWN_RANGE * 2,
+      y: center.y + (Math.random() - 0.5) * SPAWN_RANGE * 2
+    };
+  }
+  function dist(a, b) {
+    return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
+  }
   function toScreen(wx, wy) {
     return {
-      x: (wx - cameraOffset.x) + GAME_WIDTH / 2,
-      y: (wy - cameraOffset.y) * TILT + GAME_HEIGHT / 2
+      x: wx - cameraOffset.x + GAME_WIDTH / 2,
+      y: wy - cameraOffset.y + GAME_HEIGHT / 2
     };
   }
 
+  function startGame() {
+    phase = 'playing';
+    scottyPos = { x: 0, y: 0 };
+    cameraOffset = { x: 0, y: 0 };
+    score = 0;
+    timeLeft = GAME_DURATION;
+    coins = [];
+    squirrels = Array.from({ length: SQUIRREL_COUNT }, (_, i) => ({
+      id: i, pos: randomPosAround({ x: 0, y: 0 }), vel: { x: 0, y: 0 }, facingAngle: 0, hasLoot: true
+    }));
+    startScreen.classList.add('hidden');
+    endScreen.classList.add('hidden');
+    overlay.classList.add('hidden');
+    hud.classList.remove('hidden');
+    joystickWrap.classList.remove('hidden');
+    updateHUD();
+    if (gameLoopId) clearInterval(gameLoopId);
+    if (timerId) clearInterval(timerId);
+    gameLoopId = setInterval(tick, 1000 / 60);
+    timerId = setInterval(timerTick, 1000);
+  }
+
+  function endGame(won) {
+    phase = won ? 'won' : 'lost';
+    clearInterval(gameLoopId);
+    clearInterval(timerId);
+    hud.classList.add('hidden');
+    joystickWrap.classList.add('hidden');
+    overlay.classList.remove('hidden');
+    endScreen.classList.remove('hidden');
+    document.getElementById('endIcon').textContent = won ? '🏆' : '⏰';
+    document.getElementById('endTitle').textContent = won ? 'BANK SECURED!' : "TIME'S UP!";
+    document.getElementById('endMsg').textContent = won ? 'Great job, Scotty!' : 'The robbers got away...';
+    document.getElementById('endScore').textContent = score;
+  }
+
+  function updateHUD() {
+    document.getElementById('scoreVal').textContent = score;
+    const m = Math.floor(timeLeft / 60), s = timeLeft % 60;
+    const el = document.getElementById('timerEl');
+    el.textContent = '⏱️ ' + m + ':' + (s < 10 ? '0' : '') + s;
+    el.classList.toggle('warn', timeLeft <= 30);
+  }
+
+  let gameLoopId = 0, timerId = 0;
+  function timerTick() {
+    if (phase !== 'playing') return;
+    timeLeft--;
+    updateHUD();
+    if (timeLeft <= 0) endGame(score >= 100);
+  }
+
   function tick() {
+    if (phase !== 'playing') return;
+
     const speed = 4;
     scottyPos.x += joystick.x * speed;
     scottyPos.y += joystick.y * speed;
@@ -67,64 +188,176 @@
     cameraOffset.y = scottyPos.y;
     const joyMag = Math.sqrt(joystick.x * joystick.x + joystick.y * joystick.y);
     if (joyMag > 0.08) scottyAngle = Math.atan2(joystick.x, -joystick.y);
+
+    squirrels = squirrels.map(sq => {
+      const dx = sq.pos.x - scottyPos.x, dy = sq.pos.y - scottyPos.y;
+      const d = Math.sqrt(dx * dx + dy * dy);
+      let vx = sq.vel.x, vy = sq.vel.y;
+      if (d < 100 && d > 0) {
+        const flee = ((100 - d) / 100) * 2.5;
+        vx += (dx / d) * flee;
+        vy += (dy / d) * flee;
+      }
+      vx += (Math.random() - 0.5) * 0.4;
+      vy += (Math.random() - 0.5) * 0.4;
+      vx *= 0.95;
+      vy *= 0.95;
+      const mag = Math.sqrt(vx * vx + vy * vy);
+      if (mag > SQUIRREL_MAX_SPEED) { vx = (vx / mag) * SQUIRREL_MAX_SPEED; vy = (vy / mag) * SQUIRREL_MAX_SPEED; }
+      let facingAngle = sq.facingAngle;
+      if (mag > 0.05) facingAngle = Math.atan2(vx, -vy);
+      return {
+        ...sq,
+        pos: { x: sq.pos.x + vx, y: sq.pos.y + vy },
+        vel: { x: vx, y: vy },
+        facingAngle
+      };
+    });
+
+    squirrels.forEach((sq, i) => {
+      if (sq.hasLoot && dist(scottyPos, sq.pos) < (SCOTTY_SIZE + SQUIRREL_SIZE) / 2) {
+        squirrels[i] = { ...sq, hasLoot: false };
+        for (let c = 0; c < 3; c++) {
+          coins.push({
+            id: coinId++,
+            pos: { x: sq.pos.x + (Math.random() - 0.5) * 40, y: sq.pos.y + (Math.random() - 0.5) * 40 },
+            createdAt: Date.now()
+          });
+        }
+      }
+    });
+
+    coins = coins.filter(c => {
+      if (dist(scottyPos, c.pos) < (SCOTTY_SIZE + COIN_SIZE) / 2) {
+        score += 10;
+        return false;
+      }
+      if (Date.now() - c.createdAt > 8000) return false;
+      return true;
+    });
+
+    squirrels.forEach((sq, i) => {
+      if (!sq.hasLoot && Math.random() < 0.01) {
+        squirrels[i] = { ...sq, pos: randomPosAround(scottyPos), hasLoot: true, facingAngle: sq.facingAngle };
+      }
+    });
+
+    updateHUD();
     draw();
   }
 
-  function drawShadow(sx, sy, rx) {
-    ctx.fillStyle = 'rgba(0,0,0,0.22)';
-    ctx.beginPath();
-    ctx.ellipse(sx, sy + 12, rx, 6, 0, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  function drawScotty(sx, sy) {
-    ctx.save();
-    ctx.translate(sx, sy);
-    ctx.fillStyle = '#e8c547';
-    ctx.beginPath();
-    ctx.arc(0, 0, 16, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(50,40,10,0.5)';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    ctx.restore();
-  }
-
   function draw() {
+    // Flat grass terrain
     const grass = ctx.createLinearGradient(0, 0, 0, GAME_HEIGHT);
-    grass.addColorStop(0, '#5a8c4a');
+    grass.addColorStop(0, '#6b9c5a');
     grass.addColorStop(1, '#4a7c3a');
     ctx.fillStyle = grass;
     ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
 
-    const GRID = 80;
-    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
-    ctx.lineWidth = 1;
-    const worldXLeft = cameraOffset.x - GAME_WIDTH / 2;
-    const firstGridX = Math.ceil(worldXLeft / GRID) * GRID;
-    for (let wx = firstGridX; wx < cameraOffset.x + GAME_WIDTH / 2 + GRID; wx += GRID) {
-      const sx = (wx - cameraOffset.x) + GAME_WIDTH / 2;
-      ctx.beginPath(); ctx.moveTo(sx, 0); ctx.lineTo(sx, GAME_HEIGHT); ctx.stroke();
-    }
-    const worldYTop = cameraOffset.y - GAME_HEIGHT / (2 * TILT);
-    const firstGridY = Math.ceil(worldYTop / GRID) * GRID;
-    for (let wy = firstGridY; wy < cameraOffset.y + GAME_HEIGHT / (2 * TILT) + GRID; wy += GRID) {
-      const sy = (wy - cameraOffset.y) * TILT + GAME_HEIGHT / 2;
-      ctx.beginPath(); ctx.moveTo(0, sy); ctx.lineTo(GAME_WIDTH, sy); ctx.stroke();
-    }
+    coins.forEach(c => {
+      const s = toScreen(c.pos.x, c.pos.y);
+      if (s.x < -25 || s.x > GAME_WIDTH + 25 || s.y < -25 || s.y > GAME_HEIGHT + 25) return;
+      ctx.save();
+      ctx.translate(s.x, s.y);
+      ctx.scale(1.4, 1.4);
+      const gr = ctx.createRadialGradient(-5, -5, 0, 0, 0, 12);
+      gr.addColorStop(0, '#f0d050');
+      gr.addColorStop(0.5, '#d4a84b');
+      gr.addColorStop(1, '#b8860b');
+      ctx.fillStyle = gr;
+      ctx.beginPath();
+      ctx.arc(0, 0, 10, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#5c4a20';
+      ctx.font = 'bold 14px system-ui';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('$', 0, 0);
+      ctx.restore();
+    });
 
-    const haze = ctx.createLinearGradient(0, 0, 0, GAME_HEIGHT);
-    haze.addColorStop(0, 'rgba(40,60,30,0.25)');
-    haze.addColorStop(0.45, 'rgba(40,60,30,0)');
-    ctx.fillStyle = haze;
-    ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+    squirrels.forEach(sq => {
+      const s = toScreen(sq.pos.x, sq.pos.y);
+      if (s.x < -60 || s.x > GAME_WIDTH + 60 || s.y < -60 || s.y > GAME_HEIGHT + 60) return;
+      ctx.save();
+      ctx.translate(s.x, s.y);
+      ctx.rotate(sq.facingAngle);
+      ctx.scale(SCALE, SCALE);
+      ctx.globalAlpha = sq.hasLoot ? 1 : 0.6;
+      // Squirrel - body (back) then head (front), facing up
+      ctx.fillStyle = '#6b5a4a';
+      ctx.beginPath();
+      ctx.ellipse(0, 6, 14, 12, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#5a4a3a';
+      ctx.beginPath();
+      ctx.ellipse(0, -4, 11, 10, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#000';
+      ctx.beginPath();
+      ctx.arc(-4, -6, 2.5, 0, Math.PI * 2);
+      ctx.arc(4, -6, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+      if (sq.hasLoot) {
+        ctx.font = '16px sans-serif';
+        ctx.fillText('💰', 0, -22);
+      }
+      ctx.globalAlpha = 1;
+      ctx.restore();
+    });
 
+    // Scotty the terrier (you) - larger, turns to face movement (3D-style)
     const sx = GAME_WIDTH / 2, sy = GAME_HEIGHT / 2;
-    drawShadow(sx, sy, 18);
-    drawScotty(sx, sy);
+    ctx.save();
+    ctx.translate(sx, sy);
+    ctx.rotate(scottyAngle);
+    ctx.scale(SCALE, SCALE);
+    // Body (wiry terrier - compact oval)
+    ctx.fillStyle = '#8b6914';
+    ctx.strokeStyle = '#6b5010';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.ellipse(0, 6, 12, 10, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    // Head (round, terrier shape)
+    ctx.fillStyle = '#8b6914';
+    ctx.beginPath();
+    ctx.arc(0, -6, 10, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    // Pointy ears (terrier)
+    ctx.fillStyle = '#6b5010';
+    ctx.beginPath();
+    ctx.moveTo(-10, -10);
+    ctx.lineTo(-6, -14);
+    ctx.lineTo(-4, -10);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(10, -10);
+    ctx.lineTo(6, -14);
+    ctx.lineTo(4, -10);
+    ctx.closePath();
+    ctx.fill();
+    // Snout/beard (short)
+    ctx.fillStyle = '#7a5a12';
+    ctx.beginPath();
+    ctx.ellipse(0, -2, 5, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Eyes
+    ctx.fillStyle = '#000';
+    ctx.beginPath();
+    ctx.arc(-3, -8, 2, 0, Math.PI * 2);
+    ctx.arc(3, -8, 2, 0, Math.PI * 2);
+    ctx.fill();
+    // Nose
+    ctx.beginPath();
+    ctx.arc(0, -4, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
   }
 
-  // Joystick
   const maxDist = 50 - 22;
   function setJoystick(clientX, clientY) {
     const r = joystickBase.getBoundingClientRect();
@@ -155,9 +388,12 @@
     window.addEventListener('mouseup', up);
   });
 
-  // Start immediately
-  setInterval(tick, 1000 / 60);
-  draw();
+  document.getElementById('btnStart').onclick = startGame;
+  document.getElementById('btnAgain').onclick = () => {
+    endScreen.classList.add('hidden');
+    startScreen.classList.remove('hidden');
+    overlay.classList.remove('hidden');
+  };
 })();
   </script>
 </body>
