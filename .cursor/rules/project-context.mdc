@@ -135,7 +135,7 @@ When asked to check the byte size, run these commands and update the current siz
 rm -f app.tar.br && tar -cf - -C App index.html | brotli -q 11 -o app.tar.br && stat -f %z app.tar.br
 ```
 
-**Current compressed size: 5046 bytes**
+**Current compressed size: 7398 bytes**
 
 The game also ships as `app.tar.br` which can be extracted and served using `extract_and_serve.sh`.
 
