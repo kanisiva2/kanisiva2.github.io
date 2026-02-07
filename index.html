@@ -6,206 +6,442 @@
   <title>Game</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; touch-action: none; user-select: none; }
-    html, body { width: 100%; height: 100%; overflow: hidden; background: #1e1a14; color: #f5e6d3; font-family: system-ui; }
-    #wrap { position: fixed; inset: 0; width: 100%; height: 100%; }
-    #gameBox { position: absolute; inset: 0; width: 100%; height: 100%; overflow: hidden; background: #5a8c4a; }
-    #gameCanvas { display: block; width: 100%; height: 100%; background: #5a8c4a; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #1e1a14; }
+    #gameBox { position: fixed; inset: 0; overflow: hidden; }
+    #gameCanvas { display: block; width: 100%; height: 100%; }
     #joystickWrap { position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 30; }
-    #joystickBase { width: 100px; height: 100px; border-radius: 50%; background: radial-gradient(circle, rgba(200,220,255,0.02) 0%, rgba(200,220,255,0.04) 40%, rgba(190,215,255,0.15) 70%, rgba(210,230,255,0.3) 88%, rgba(220,235,255,0.38) 100%); border: 2px solid rgba(200,220,255,0.3); display: flex; align-items: center; justify-content: center; touch-action: none; }
-    #joystickKnob { width: 44px; height: 44px; border-radius: 50%; background: radial-gradient(circle, rgba(200,220,255,0.03) 0%, rgba(200,220,255,0.06) 35%, rgba(190,215,255,0.18) 65%, rgba(210,230,255,0.33) 85%, rgba(220,235,255,0.42) 100%); border: 2px solid rgba(200,220,255,0.35); position: absolute; transition: transform .05s; }
+    #joystickBase { width: 100px; height: 100px; border-radius: 50%; background: radial-gradient(circle, rgba(200,220,255,0.02) 0%, rgba(200,220,255,0.04) 40%, rgba(190,215,255,0.15) 70%, rgba(210,230,255,0.3) 88%, rgba(220,235,255,0.38) 100%); border: 2px solid rgba(200,220,255,0.3); touch-action: none; }
+    #joystickKnob { width: 44px; height: 44px; border-radius: 50%; background: radial-gradient(circle, rgba(200,220,255,0.03) 0%, rgba(200,220,255,0.06) 35%, rgba(190,215,255,0.18) 65%, rgba(210,230,255,0.33) 85%, rgba(220,235,255,0.42) 100%); border: 2px solid rgba(200,220,255,0.35); position: absolute; left: 28px; top: 28px; transition: transform .05s; }
+    .blur { filter: blur(4px); pointer-events: none; }
+    #endOverlay { display: none; position: fixed; inset: 0; z-index: 40; background: rgba(255,255,255,0.35); align-items: center; justify-content: center; flex-direction: column; gap: 40px; }
+    #playAgain { font: bold 6px monospace; transform: scale(4); -webkit-font-smoothing: none; color: #fff; background: rgba(0,0,0,0.6); padding: 3px 6px; border: 1px solid #fff; cursor: pointer; letter-spacing: 1px; }
+    #endScore { font: bold 6px monospace; transform: scale(3); -webkit-font-smoothing: none; color: #e8c547; letter-spacing: 1px; }
   </style>
 </head>
 <body>
-  <div id="wrap">
-    <div id="gameBox">
-      <canvas id="gameCanvas"></canvas>
-      <div id="joystickWrap">
-        <div id="joystickBase">
-          <div id="joystickKnob"></div>
-        </div>
+  <div id="gameBox">
+    <canvas id="gameCanvas"></canvas>
+    <div id="joystickWrap">
+      <div id="joystickBase">
+        <div id="joystickKnob"></div>
       </div>
     </div>
+    <div id="endOverlay"><div id="playAgain">PLAY AGAIN</div><div id="endScore"></div></div>
   </div>
   <script>
 (function () {
-  let GAME_WIDTH = window.innerWidth, GAME_HEIGHT = window.innerHeight;
-
+  let W = innerWidth, H = innerHeight;
   const canvas = document.getElementById('gameCanvas');
   const ctx = canvas.getContext('2d');
 
-  function resize() {
-    GAME_WIDTH = window.innerWidth;
-    GAME_HEIGHT = window.innerHeight;
-    canvas.width = GAME_WIDTH;
-    canvas.height = GAME_HEIGHT;
-  }
-  window.addEventListener('resize', function() { resize(); draw(); });
+  function resize() { W = innerWidth; H = innerHeight; canvas.width = W; canvas.height = H; }
+  addEventListener('resize', function() { resize(); draw(); });
   resize();
 
-  const joystickBase = document.getElementById('joystickBase');
-  const joystickKnob = document.getElementById('joystickKnob');
+  const jBase = document.getElementById('joystickBase');
+  const jKnob = document.getElementById('joystickKnob');
 
-  let scottyPos = { x: 0, y: 0 };
-  let scottyVel = { x: 0, y: 0 };
-  let scottyAngle = 0;
-  let cameraOffset = { x: 0, y: 0 };
-  let joystick = { x: 0, y: 0 };
-  const MAX_SPEED = 12;
-  const ACCEL_FWD = 0.7;
-  const ACCEL_LAT = 0.25;
-  const FRICTION = 0.96;
-  const SCALE = 2;
-  const TILT = 0.75;
-  const CHUNK = 80;
+  let pos = { x: 0, y: 0 };
+  let vel = { x: 0, y: 0 };
+  let cam = { x: 0, y: 0 };
+  let joy = { x: 0, y: 0 };
+  const MSPD = 12, AF = 0.7, AL = 0.25, FR = 0.96, TILT = 0.75;
+  const CHUNK = 80, PIX = 10, PPC = CHUNK / PIX;
   const chunks = {};
-  const GREENS = ['#4a7c3a', '#508242', '#5a8c4a', '#5a8848'];
+  let squirrels = [];
+  for (let i = 0; i < 3; i++) squirrels.push({
+    x: (Math.random() - 0.5) * 4 * CHUNK,
+    y: (Math.random() - 0.5) * 4 * CHUNK,
+    vx: 0, vy: 0
+  });
+  let state = 0, timer = 30, tId = 0, score = 0, hiScore = 0;
+  const FONT = [[7,5,5,5,7],[2,6,2,2,2],[7,1,7,4,7],[7,1,7,1,7],[5,5,7,1,1],[7,4,7,1,7],[7,4,7,5,7],[7,1,1,1,1],[7,5,7,5,7],[7,5,7,1,7],[7,4,4,4,7],[7,5,7,6,5],[7,4,7,4,7],[5,5,7,5,5],[7,2,2,2,7],[0,2,0,2,0]];
+  function drawPx(chars, x, y, sz) {
+    chars.forEach((d, di) => {
+      if (d < 0) return;
+      const ox = x + di * sz * 4;
+      FONT[d].forEach((row, r) => { for (let c = 0; c < 3; c++) if (row & (4 >> c)) {
+        ctx.fillStyle = '#000';
+        ctx.fillRect(ox + c * sz - 1, y + r * sz - 1, sz + 2, sz + 2);
+      }});
+      FONT[d].forEach((row, r) => { for (let c = 0; c < 3; c++) if (row & (4 >> c)) {
+        ctx.fillStyle = '#e8c547';
+        ctx.fillRect(ox + c * sz, y + r * sz, sz, sz);
+      }});
+    });
+  }
+
+  function nearbyDecos(cx, cy) {
+    let count = 0;
+    const R = 4;
+    for (let dy = -R; dy <= R; dy++) for (let dx = -R; dx <= R; dx++) {
+      if (dx * dx + dy * dy > R * R || (!dx && !dy)) continue;
+      const ch = chunks[cx + dx + ',' + (cy + dy)];
+      if (ch && (ch.grass || ch.bush || ch.tree || ch.peb)) count++;
+    }
+    return count;
+  }
 
   function getChunk(cx, cy) {
     const k = cx + ',' + cy;
-    if (!(k in chunks)) chunks[k] = GREENS[(Math.random() * 4) | 0];
+    if (!(k in chunks)) {
+      const c = document.createElement('canvas');
+      c.width = c.height = CHUNK;
+      const g = c.getContext('2d');
+      for (let y = 0; y < PPC; y++) for (let x = 0; x < PPC; x++) {
+        const v = Math.random() * 10 - 5 | 0;
+        g.fillStyle = 'rgb(' + (40 + v) + ',' + (170 + v) + ',' + (40 + v) + ')';
+        g.fillRect(x * PIX, y * PIX, PIX, PIX);
+      }
+      let grass = null, bush = null, tree = null, peb = null;
+      const spawn = cx > -3 && cx < 3 && cy > -3 && cy < 3;
+      if (!spawn && Math.random() < 0.06) {
+        const pv = [];
+        for (let i = 0; i < 30; i++) pv.push(Math.random() * 30 - 15 | 0);
+        peb = [Math.random() * (CHUNK - 30) | 0, Math.random() * (CHUNK - 10) | 0, pv];
+      }
+      if (!spawn) {
+        const nearby = nearbyDecos(cx, cy);
+        const prob = Math.max(0.02, 0.15 - nearby * 0.04);
+        const r = Math.random();
+        if (r < prob * 0.45) {
+          grass = [Math.random() * (CHUNK - 30) | 0, Math.random() * (CHUNK - 10) | 0];
+        } else if (r < prob * 0.75) {
+          const bv = [];
+          for (let i = 0; i < 90; i++) bv.push(Math.random() * 40 - 20 | 0);
+          bush = [CHUNK / 2 - 27 | 0, CHUNK / 2, bv];
+        } else if (r < prob) {
+          const lv = [], tv = [];
+          for (let i = 0; i < 100; i++) lv.push(Math.random() * 40 - 20 | 0);
+          for (let i = 0; i < 20; i++) tv.push(Math.random() * 30 - 15 | 0);
+          tree = [CHUNK / 2 - 20 | 0, CHUNK / 2, lv, tv];
+        }
+      }
+      chunks[k] = { c, grass, bush, tree, peb };
+    }
     return chunks[k];
   }
 
   function toScreen(wx, wy) {
-    return {
-      x: (wx - cameraOffset.x) + GAME_WIDTH / 2,
-      y: (wy - cameraOffset.y) * TILT + GAME_HEIGHT / 2
-    };
+    return { x: (wx - cam.x) + W / 2, y: (wy - cam.y) * TILT + H / 2 };
+  }
+
+  function hitTree(x, y) {
+    const r = 14;
+    for (let cy = Math.floor((y - r) / CHUNK); cy <= Math.floor((y + r) / CHUNK); cy++)
+      for (let cx = Math.floor((x - r) / CHUNK); cx <= Math.floor((x + r) / CHUNK); cx++)
+        if (getChunk(cx, cy).tree) return true;
+    return false;
   }
 
   function tick() {
-    // Decompose joystick into forward (along velocity) and lateral (turning) components
-    const spd = Math.sqrt(scottyVel.x * scottyVel.x + scottyVel.y * scottyVel.y);
-    let ax = joystick.x, ay = joystick.y;
-    if (spd > 0.3) {
-      const nx = scottyVel.x / spd, ny = scottyVel.y / spd;
-      const fwd = ax * nx + ay * ny; // forward component (dot product)
-      const lx = ax - fwd * nx, ly = ay - fwd * ny; // lateral component
-      ax = fwd * nx * ACCEL_FWD + lx * ACCEL_LAT;
-      ay = fwd * ny * ACCEL_FWD + ly * ACCEL_LAT;
-    } else {
-      ax *= ACCEL_FWD; ay *= ACCEL_FWD;
+    if (state === 1) {
+      const spd = Math.sqrt(vel.x * vel.x + vel.y * vel.y);
+      let ax = joy.x, ay = joy.y;
+      if (spd > 0.3) {
+        const nx = vel.x / spd, ny = vel.y / spd;
+        const fwd = ax * nx + ay * ny;
+        const lx = ax - fwd * nx, ly = ay - fwd * ny;
+        ax = fwd * nx * AF + lx * AL;
+        ay = fwd * ny * AF + ly * AL;
+      } else { ax *= AF; ay *= AF; }
+      vel.x = vel.x * FR + ax;
+      vel.y = vel.y * FR + ay;
+      const s2 = Math.sqrt(vel.x * vel.x + vel.y * vel.y);
+      if (s2 > MSPD) { vel.x = vel.x / s2 * MSPD; vel.y = vel.y / s2 * MSPD; }
+      let nx = pos.x + vel.x, ny = pos.y + vel.y;
+      if (hitTree(nx, pos.y)) { nx = pos.x; vel.x = 0; }
+      if (hitTree(nx, ny)) { ny = pos.y; vel.y = 0; }
+      pos.x = nx; pos.y = ny;
+      squirrels.forEach(sq => {
+        const dx = pos.x - sq.x, dy = pos.y - sq.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const cd = dist / CHUNK;
+        let tx = (Math.random() - 0.5) * 0.6, ty = (Math.random() - 0.5) * 0.6;
+        if (dist > 1) {
+          const ux = dx / dist, uy = dy / dist;
+          if (cd < 2.5) { tx -= ux * 1.2; ty -= uy * 1.2; }
+          else if (cd > 4) { tx += ux * 0.6; ty += uy * 0.6; }
+        }
+        const tl = Math.sqrt(tx * tx + ty * ty);
+        if (tl > 0) { sq.vx += tx / tl * 0.4; sq.vy += ty / tl * 0.4; }
+        sq.vx *= 0.95; sq.vy *= 0.95;
+        const ss = Math.sqrt(sq.vx * sq.vx + sq.vy * sq.vy);
+        if (ss > 8) { sq.vx = sq.vx / ss * 8; sq.vy = sq.vy / ss * 8; }
+        let snx = sq.x + sq.vx, sny = sq.y + sq.vy;
+        if (hitTree(snx, sq.y)) { snx = sq.x; sq.vx *= -0.5; }
+        if (hitTree(snx, sny)) { sny = sq.y; sq.vy *= -0.5; }
+        sq.x = snx; sq.y = sny;
+        if (dist < 28) sq.caught = true;
+      });
+      squirrels = squirrels.filter(sq => { if (sq.caught) { score++; return false; } return true; });
+      cam.x += (pos.x - cam.x) * 0.1;
+      cam.y += (pos.y - cam.y) * 0.1;
     }
-    scottyVel.x = scottyVel.x * FRICTION + ax;
-    scottyVel.y = scottyVel.y * FRICTION + ay;
-    const spd2 = Math.sqrt(scottyVel.x * scottyVel.x + scottyVel.y * scottyVel.y);
-    if (spd2 > MAX_SPEED) { scottyVel.x = scottyVel.x / spd2 * MAX_SPEED; scottyVel.y = scottyVel.y / spd2 * MAX_SPEED; }
-    scottyPos.x += scottyVel.x;
-    scottyPos.y += scottyVel.y;
-    // Camera lerps toward player (lag behind)
-    cameraOffset.x += (scottyPos.x - cameraOffset.x) * 0.1;
-    cameraOffset.y += (scottyPos.y - cameraOffset.y) * 0.1;
-    if (spd2 > 0.1) scottyAngle = Math.atan2(scottyVel.x, -scottyVel.y);
-    draw();
-  }
-
-  function drawShadow(sx, sy, rx) {
-    ctx.fillStyle = 'rgba(0,0,0,0.22)';
-    ctx.beginPath();
-    ctx.ellipse(sx, sy + 12, rx, 6, 0, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  function drawScotty(sx, sy) {
-    ctx.save();
-    ctx.translate(sx, sy);
-    ctx.fillStyle = '#e8c547';
-    ctx.beginPath();
-    ctx.arc(0, 0, 16, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(50,40,10,0.5)';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    ctx.restore();
+    if (state < 2) draw();
   }
 
   function draw() {
-    // Visible chunk range (with 1-chunk margin)
-    const cx0 = Math.floor((cameraOffset.x - GAME_WIDTH / 2) / CHUNK) - 1;
-    const cx1 = Math.ceil((cameraOffset.x + GAME_WIDTH / 2) / CHUNK) + 1;
-    const cy0 = Math.floor((cameraOffset.y - GAME_HEIGHT / (2 * TILT)) / CHUNK) - 1;
-    const cy1 = Math.ceil((cameraOffset.y + GAME_HEIGHT / (2 * TILT)) / CHUNK) + 1;
+    ctx.imageSmoothingEnabled = false;
+    const cx0 = Math.floor((cam.x - W / 2) / CHUNK) - 1;
+    const cx1 = Math.ceil((cam.x + W / 2) / CHUNK) + 1;
+    const cy0 = Math.floor((cam.y - H / (2 * TILT)) / CHUNK) - 1;
+    const cy1 = Math.ceil((cam.y + H / (2 * TILT)) / CHUNK) + 1;
     const chunkH = CHUNK * TILT;
 
-    for (let cy = cy0; cy <= cy1; cy++) {
+    for (let cy = cy0; cy <= cy1; cy++)
       for (let cx = cx0; cx <= cx1; cx++) {
         const s = toScreen(cx * CHUNK, cy * CHUNK);
-        ctx.fillStyle = getChunk(cx, cy);
-        ctx.fillRect(s.x, s.y, CHUNK, chunkH);
+        ctx.drawImage(getChunk(cx, cy).c, s.x, s.y, CHUNK, chunkH);
+      }
+
+    const P = 3;
+    const gFill = [
+      [1,0],[0,1],[0,2],[-1,3],[-1,4],[-2,5],
+      [3,0],[3,1],[3,2],[3,3],[3,4],[3,5],
+      [5,0],[6,1],[6,2],[7,3],[7,4],[8,5],
+    ];
+    const gOut = [
+      [0,0],[-1,1],[-1,2],[-2,3],[-2,4],[-3,5],[-3,6],[-2,6],[-1,5],[0,4],[0,3],[1,2],[1,1],
+      [2,0],[2,1],[2,2],[2,3],[2,4],[2,5],[2,6],[3,6],[4,5],[4,4],[4,3],[4,2],[4,1],[4,0],
+      [6,0],[7,1],[7,2],[8,3],[8,4],[9,5],[9,6],[8,6],[7,5],[6,4],[6,3],[5,2],[5,1],
+      [0,-1],[1,-1],[2,-1],[3,-1],[4,-1],[5,-1],[6,-1],
+    ];
+    const bFill = [
+      [9,8],[10,8],[11,8],[12,8],[13,8],
+      [8,9],[9,9],[10,9],[11,9],[12,9],[13,9],[14,9],
+      [7,10],[8,10],[9,10],[10,10],[11,10],[12,10],[13,10],[14,10],[15,10],
+      [7,11],[8,11],[9,11],[10,11],[11,11],[12,11],[13,11],[14,11],[15,11],
+      [3,0],[4,0],[5,0],[6,0],[7,0],[8,0],[9,0],[10,0],
+      [2,1],[3,1],[4,1],[5,1],[6,1],[7,1],[8,1],[9,1],[10,1],[11,1],
+      [1,2],[2,2],[3,2],[4,2],[5,2],[6,2],[7,2],[8,2],[9,2],[10,2],[11,2],[12,2],
+      [0,3],[1,3],[2,3],[3,3],[4,3],[5,3],[6,3],[7,3],[8,3],[9,3],[10,3],[11,3],[12,3],
+      [0,4],[1,4],[2,4],[3,4],[4,4],[5,4],[6,4],[7,4],[8,4],[9,4],[10,4],[11,4],[12,4],
+      [0,5],[1,5],[2,5],[3,5],[4,5],[5,5],[6,5],[7,5],[8,5],[9,5],[10,5],[11,5],[12,5],
+      [1,6],[2,6],[3,6],[4,6],[5,6],[6,6],[7,6],[8,6],[9,6],[10,6],[11,6],
+      [2,7],[3,7],[4,7],[5,7],[6,7],[7,7],[8,7],[9,7],[10,7],
+      [14,1],[15,1],[16,1],[17,1],[18,1],[19,1],
+      [13,2],[14,2],[15,2],[16,2],[17,2],[18,2],[19,2],[20,2],
+      [13,3],[14,3],[15,3],[16,3],[17,3],[18,3],[19,3],[20,3],[21,3],
+      [13,4],[14,4],[15,4],[16,4],[17,4],[18,4],[19,4],[20,4],[21,4],
+      [13,5],[14,5],[15,5],[16,5],[17,5],[18,5],[19,5],[20,5],[21,5],
+      [13,6],[14,6],[15,6],[16,6],[17,6],[18,6],[19,6],[20,6],[21,6],
+      [12,7],[13,7],[14,7],[15,7],[16,7],[17,7],[18,7],[19,7],[20,7],
+      [13,8],[14,8],[15,8],[16,8],[17,8],[18,8],[19,8],
+    ];
+    const bOut = [
+      [8,8],[14,8],[7,9],[15,9],
+      [6,10],[16,10],[6,11],[16,11],
+      [7,12],[8,12],[9,12],[10,12],[11,12],[12,12],[13,12],[14,12],[15,12],
+      [3,-1],[4,-1],[5,-1],[6,-1],[7,-1],[8,-1],[9,-1],[10,-1],
+      [2,0],[11,0],[1,1],[12,1],[13,1],[15,0],[16,0],[17,0],[18,0],[19,0],[20,1],
+      [0,2],[21,2],[-1,3],[22,3],[-1,4],[22,4],[-1,5],[22,5],
+      [0,6],[22,6],[1,7],[21,7],
+      [2,8],[20,8],
+      [3,9],[4,9],[5,9],[6,9],[7,9],
+      [15,9],[16,9],[17,9],[18,9],[19,9],
+    ];
+    const tTrk = [
+      [5,0],[6,0],[7,0],[8,0],
+      [5,1],[6,1],[7,1],[8,1],
+      [6,2],[7,2],[6,3],[7,3],[6,4],[7,4],[6,5],[7,5],[6,6],[7,6],[6,7],[7,7],
+    ];
+    const tLf = [
+      [5,8],[6,8],[7,8],[8,8],
+      [3,9],[4,9],[5,9],[6,9],[7,9],[8,9],[9,9],[10,9],
+      [2,10],[3,10],[4,10],[5,10],[6,10],[7,10],[8,10],[9,10],[10,10],[11,10],
+      [1,11],[2,11],[3,11],[4,11],[5,11],[6,11],[7,11],[8,11],[9,11],[10,11],[11,11],[12,11],
+      [1,12],[2,12],[3,12],[4,12],[5,12],[6,12],[7,12],[8,12],[9,12],[10,12],[11,12],[12,12],
+      [1,13],[2,13],[3,13],[4,13],[5,13],[6,13],[7,13],[8,13],[9,13],[10,13],[11,13],[12,13],
+      [1,14],[2,14],[3,14],[4,14],[5,14],[6,14],[7,14],[8,14],[9,14],[10,14],[11,14],[12,14],
+      [2,15],[3,15],[4,15],[5,15],[6,15],[7,15],[8,15],[9,15],[10,15],[11,15],
+      [3,16],[4,16],[5,16],[6,16],[7,16],[8,16],[9,16],[10,16],
+      [5,17],[6,17],[7,17],[8,17],
+    ];
+    const tOut = [
+      [5,-1],[6,-1],[7,-1],[8,-1],
+      [4,0],[9,0],[4,1],[9,1],
+      [5,2],[8,2],[5,3],[8,3],[5,4],[8,4],[5,5],[8,5],[5,6],[8,6],[5,7],[8,7],
+      [4,8],[9,8],
+      [2,9],[11,9],
+      [1,10],[12,10],
+      [0,11],[13,11],[0,12],[13,12],[0,13],[13,13],[0,14],[13,14],
+      [1,15],[12,15],
+      [2,16],[11,16],
+      [4,17],[9,17],
+      [5,18],[6,18],[7,18],[8,18],
+    ];
+    const pFl = [
+      [2,0],[3,0],[4,0],[5,0],
+      [1,1],[2,1],[3,1],[4,1],[5,1],[6,1],
+      [0,2],[1,2],[2,2],[3,2],[4,2],[5,2],[6,2],[7,2],
+      [1,3],[2,3],[3,3],[4,3],[5,3],[6,3],
+      [2,4],[3,4],[4,4],
+    ];
+    const pOt = [
+      [2,-1],[3,-1],[4,-1],[5,-1],
+      [1,0],[6,0],
+      [0,1],[7,1],
+      [-1,2],[8,2],
+      [0,3],[7,3],
+      [1,4],[5,4],
+      [2,5],[3,5],[4,5],
+    ];
+    function drawDeco(wx, wy, fill, out, vr) {
+      const s = toScreen(wx, wy);
+      ctx.fillStyle = 'rgb(15,85,12)';
+      out.forEach(([dx, dy]) => ctx.fillRect(s.x + dx * P, s.y - dy * P, P, P));
+      if (vr) {
+        fill.forEach(([dx, dy], i) => {
+          const v = vr[i % vr.length];
+          ctx.fillStyle = 'rgb(' + (25 + v) + ',' + (140 + v) + ',' + (25 + v) + ')';
+          ctx.fillRect(s.x + dx * P, s.y - dy * P, P, P);
+        });
+      } else {
+        ctx.fillStyle = 'rgb(35,170,35)';
+        fill.forEach(([dx, dy]) => ctx.fillRect(s.x + dx * P, s.y - dy * P, P, P));
       }
     }
-
-    const sc = toScreen(scottyPos.x, scottyPos.y);
-    drawShadow(sc.x, sc.y, 18);
-    drawScotty(sc.x, sc.y);
+    function drawTree(wx, wy, lv, tv) {
+      const s = toScreen(wx, wy);
+      ctx.fillStyle = 'rgb(20,50,15)';
+      tOut.forEach(([dx, dy]) => ctx.fillRect(s.x + dx * P, s.y - dy * P, P, P));
+      tTrk.forEach(([dx, dy], i) => {
+        const v = tv[i % tv.length];
+        ctx.fillStyle = 'rgb(' + (110 + v) + ',' + (70 + v) + ',' + (35 + v) + ')';
+        ctx.fillRect(s.x + dx * P, s.y - dy * P, P, P);
+      });
+      tLf.forEach(([dx, dy], i) => {
+        const v = lv[i % lv.length];
+        ctx.fillStyle = 'rgb(' + (30 + v) + ',' + (130 + v) + ',' + (30 + v) + ')';
+        ctx.fillRect(s.x + dx * P, s.y - dy * P, P, P);
+      });
+    }
+    function drawEnt(e) {
+      const sc = toScreen(e.x, e.y);
+      if (e.t) {
+        ctx.fillStyle = 'rgba(0,0,0,0.18)';
+        ctx.beginPath(); ctx.ellipse(sc.x, sc.y + 8, 12, 4, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.save(); ctx.translate(sc.x, sc.y);
+        ctx.fillStyle = '#4a8';
+        ctx.beginPath(); ctx.arc(0, 0, 10, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = 'rgba(20,60,30,0.5)'; ctx.lineWidth = 2; ctx.stroke();
+        ctx.restore();
+      } else {
+        ctx.fillStyle = 'rgba(0,0,0,0.22)';
+        ctx.beginPath(); ctx.ellipse(sc.x, sc.y + 12, 18, 6, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.save(); ctx.translate(sc.x, sc.y);
+        ctx.fillStyle = '#e8c547';
+        ctx.beginPath(); ctx.arc(0, 0, 16, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = 'rgba(50,40,10,0.5)'; ctx.lineWidth = 2; ctx.stroke();
+        ctx.restore();
+      }
+    }
+    const ents = [{x: pos.x, y: pos.y, t: 0}];
+    squirrels.forEach(sq => ents.push({x: sq.x, y: sq.y, t: 1}));
+    ents.sort((a, b) => a.y - b.y);
+    let ei = 0;
+    for (let cy = cy0; cy <= cy1; cy++) {
+      for (let cx = cx0; cx <= cx1; cx++) {
+        const ch = getChunk(cx, cy), wx = cx * CHUNK, wy = cy * CHUNK;
+        if (ch.peb) {
+          const s = toScreen(wx + ch.peb[0], wy + ch.peb[1]);
+          ctx.fillStyle = 'rgb(50,50,45)';
+          pOt.forEach(([dx, dy]) => ctx.fillRect(s.x + dx * P, s.y - dy * P, P, P));
+          ch.peb[2].forEach((v, i) => {
+            if (i < pFl.length) {
+              ctx.fillStyle = 'rgb(' + (120 + v) + ',' + (118 + v) + ',' + (112 + v) + ')';
+              ctx.fillRect(s.x + pFl[i][0] * P, s.y - pFl[i][1] * P, P, P);
+            }
+          });
+        }
+        if (ch.grass) drawDeco(wx + ch.grass[0], wy + ch.grass[1], gFill, gOut, null);
+        if (ch.bush) drawDeco(wx + ch.bush[0], wy + ch.bush[1], bFill, bOut, ch.bush[2]);
+        if (ch.tree) drawTree(wx + ch.tree[0], wy + ch.tree[1], ch.tree[2], ch.tree[3]);
+      }
+      while (ei < ents.length && ents[ei].y < (cy + 1) * CHUNK) drawEnt(ents[ei++]);
+    }
+    while (ei < ents.length) drawEnt(ents[ei++]);
+    drawPx([Math.floor(timer / 10), timer % 10], W - 50, 15, 5);
+    const sn = score < 10 ? [score] : [...String(score)].map(Number);
+    const sc = [5,10,0,11,12,15,-1,...sn];
+    drawPx(sc, W - 15 - sc.length * 12, 48, 3);
+    if (hiScore > 0) {
+      const hn = hiScore < 10 ? [hiScore] : [...String(hiScore)].map(Number);
+      const hc = [13,14,15,-1,...hn];
+      drawPx(hc, W - 15 - hc.length * 12, 68, 3);
+    }
   }
 
-  // Joystick — click/tap anywhere, mouse stays on outer edge when outside
-  const baseR = 50; // outer circle radius
-  const knobMax = 28; // max knob travel from center
+  const endOv = document.getElementById('endOverlay');
+  function startGame() {
+    state = 1;
+    tId = setInterval(() => {
+      if (--timer <= 0) {
+        timer = 0; state = 2; clearInterval(tId);
+        if (score > hiScore) hiScore = score;
+        document.getElementById('endScore').textContent = 'SCORE: ' + score;
+        draw(); canvas.classList.add('blur'); endOv.style.display = 'flex';
+      }
+    }, 1000);
+  }
+  function resetGame() {
+    state = 0; timer = 30; score = 0;
+    pos.x = pos.y = vel.x = vel.y = cam.x = cam.y = joy.x = joy.y = 0;
+    squirrels = [];
+    for (let i = 0; i < 3; i++) squirrels.push({ x: (Math.random() - 0.5) * 4 * CHUNK, y: (Math.random() - 0.5) * 4 * CHUNK, vx: 0, vy: 0 });
+    for (const k in chunks) delete chunks[k];
+    canvas.classList.remove('blur'); endOv.style.display = 'none';
+    reset(); draw();
+  }
+  document.getElementById('playAgain').addEventListener('click', resetGame);
+
+  const baseR = 50, knobMax = 28;
   const jWrap = document.getElementById('joystickWrap');
-  let jCenter = { x: 0, y: 0 };
+  let jC = { x: 0, y: 0 };
 
   function moveBase(x, y) {
-    jCenter.x = x; jCenter.y = y;
-    jWrap.style.left = x + 'px';
-    jWrap.style.top = y + 'px';
-    jWrap.style.transform = 'translate(-50%,-50%)';
-    jWrap.style.bottom = 'auto';
+    jC.x = x; jC.y = y;
+    jWrap.style.left = x + 'px'; jWrap.style.top = y + 'px';
+    jWrap.style.transform = 'translate(-50%,-50%)'; jWrap.style.bottom = 'auto';
   }
-  function snapJoystick(clientX, clientY) {
-    const r = joystickBase.getBoundingClientRect();
+  function snap(cx, cy) {
+    const r = jBase.getBoundingClientRect();
     const ox = r.left + r.width / 2, oy = r.top + r.height / 2;
-    const dx = clientX - ox, dy = clientY - oy;
-    const d = Math.sqrt(dx * dx + dy * dy);
-    // Snap so mouse lands on outer edge (or stays inside if already inside)
-    if (d > baseR) moveBase(clientX - (dx / d) * baseR, clientY - (dy / d) * baseR);
-    else { jCenter.x = ox; jCenter.y = oy; }
+    const dx = cx - ox, dy = cy - oy, d = Math.sqrt(dx * dx + dy * dy);
+    if (d > baseR) moveBase(cx - (dx / d) * baseR, cy - (dy / d) * baseR);
+    else { jC.x = ox; jC.y = oy; }
   }
-  function updateJoystick(clientX, clientY) {
-    let dx = clientX - jCenter.x, dy = clientY - jCenter.y;
-    let d = Math.sqrt(dx * dx + dy * dy);
+  function update(cx, cy) {
+    let dx = cx - jC.x, dy = cy - jC.y, d = Math.sqrt(dx * dx + dy * dy);
     if (d > baseR) {
-      moveBase(clientX - (dx / d) * baseR, clientY - (dy / d) * baseR);
-      dx = clientX - jCenter.x; dy = clientY - jCenter.y;
-      d = baseR;
+      moveBase(cx - (dx / d) * baseR, cy - (dy / d) * baseR);
+      dx = cx - jC.x; dy = cy - jC.y; d = baseR;
     }
-    const t = d / baseR; // 0 at center, 1 at edge
-    const angle = Math.atan2(dy, dx);
-    joystickKnob.style.transform = 'translate(' + Math.cos(angle) * t * knobMax + 'px,' + Math.sin(angle) * t * knobMax + 'px)';
-    joystick.x = t * Math.cos(angle);
-    joystick.y = t * Math.sin(angle);
+    const t = d / baseR, a = Math.atan2(dy, dx);
+    jKnob.style.transform = 'translate(' + Math.cos(a) * t * knobMax + 'px,' + Math.sin(a) * t * knobMax + 'px)';
+    joy.x = t * Math.cos(a); joy.y = t * Math.sin(a);
   }
-  function resetJoystick() {
-    joystickKnob.style.transform = 'translate(0,0)';
-    joystick.x = 0;
-    joystick.y = 0;
-    // Reset joystick to default bottom-center position
-    jWrap.style.left = '50%';
-    jWrap.style.top = '';
-    jWrap.style.bottom = '24px';
-    jWrap.style.transform = 'translateX(-50%)';
+  function reset() {
+    jKnob.style.transform = 'translate(0,0)';
+    joy.x = 0; joy.y = 0;
+    jWrap.style.left = '50%'; jWrap.style.top = '';
+    jWrap.style.bottom = '24px'; jWrap.style.transform = 'translateX(-50%)';
   }
 
-  canvas.addEventListener('touchstart', e => {
-    e.preventDefault();
-    const t = e.touches[0];
-    snapJoystick(t.clientX, t.clientY);
-    updateJoystick(t.clientX, t.clientY);
-  }, { passive: false });
-  canvas.addEventListener('touchmove', e => { e.preventDefault(); updateJoystick(e.touches[0].clientX, e.touches[0].clientY); }, { passive: false });
-  canvas.addEventListener('touchend', resetJoystick);
-  canvas.addEventListener('touchcancel', resetJoystick);
+  canvas.addEventListener('touchstart', e => { e.preventDefault(); if (state === 2) return; if (!state) startGame(); snap(e.touches[0].clientX, e.touches[0].clientY); update(e.touches[0].clientX, e.touches[0].clientY); }, { passive: false });
+  canvas.addEventListener('touchmove', e => { e.preventDefault(); update(e.touches[0].clientX, e.touches[0].clientY); }, { passive: false });
+  canvas.addEventListener('touchend', reset);
+  canvas.addEventListener('touchcancel', reset);
   canvas.addEventListener('mousedown', e => {
-    snapJoystick(e.clientX, e.clientY);
-    updateJoystick(e.clientX, e.clientY);
-    const move = e => updateJoystick(e.clientX, e.clientY);
-    const up = () => { resetJoystick(); window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up); };
-    window.addEventListener('mousemove', move);
-    window.addEventListener('mouseup', up);
+    if (state === 2) return;
+    if (!state) startGame();
+    snap(e.clientX, e.clientY); update(e.clientX, e.clientY);
+    const mv = e => update(e.clientX, e.clientY);
+    const up = () => { reset(); removeEventListener('mousemove', mv); removeEventListener('mouseup', up); };
+    addEventListener('mousemove', mv); addEventListener('mouseup', up);
   });
 
-  // Start immediately
   setInterval(tick, 1000 / 60);
   draw();
 })();
