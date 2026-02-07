@@ -98,9 +98,11 @@
   var BL=[45,57,45,57,45,57,45,57,40,52,40,52,40,52,40,52,38,50,38,50,40,52,40,52,36,48,36,48,45,57,45,57];
   var mNext=0;
   function mSched(){var t0=mNext||(actx.currentTime+.1),len=ML.length*ST;mNext=t0+len;for(var i=0;i<ML.length;i++){var t=t0+i*ST;if(ML[i])tone(mtof(ML[i]),t,ST*.55,'square',.09);if(BL[i])tone(mtof(BL[i]),t,ST*1.1,'triangle',.17);hat(t)}mTm=setTimeout(mSched,(mNext-actx.currentTime-.3)*1e3)}
-  function startMus(){if(!actx){actx=new(AudioContext||webkitAudioContext)();mGn=actx.createGain();mGn.connect(actx.destination)}mGn.gain.cancelScheduledValues(actx.currentTime);mGn.gain.setValueAtTime(.5,actx.currentTime);if(actx.state==='suspended')actx.resume();mNext=0;mSched()}
+  function startMus(){if(!actx){actx=new(AudioContext||webkitAudioContext)();mGn=actx.createGain();mGn.connect(actx.destination)}mGn.gain.cancelScheduledValues(actx.currentTime);mGn.gain.setValueAtTime(.5,actx.currentTime);mNext=0;if(actx.state==='suspended'){actx.resume().then(mSched)}else{mSched()}}
   function stopMus(){clearTimeout(mTm);if(mGn){mGn.gain.cancelScheduledValues(actx.currentTime);mGn.gain.setValueAtTime(mGn.gain.value,actx.currentTime);mGn.gain.linearRampToValueAtTime(.001,actx.currentTime+.3)}}
   function endSfx(){if(!actx)return;var t=actx.currentTime+.4;[[71,.18],[67,.18],[64,.28],[57,.9]].forEach(function(n){var o=actx.createOscillator(),g=actx.createGain();o.type='triangle';o.frequency.value=mtof(n[0]);g.gain.setValueAtTime(.15,t);g.gain.linearRampToValueAtTime(.001,t+n[1]);o.connect(g);g.connect(actx.destination);o.start(t);o.stop(t+n[1]+.01);t+=n[1]})}
+  function catchSfx(){if(!actx)return;var t=actx.currentTime;[[72,.06],[76,.06],[79,.06],[84,.12]].forEach(function(n){var o=actx.createOscillator(),g=actx.createGain();o.type='square';o.frequency.value=mtof(n[0]);g.gain.setValueAtTime(.1,t);g.gain.linearRampToValueAtTime(.001,t+n[1]);o.connect(g);g.connect(actx.destination);o.start(t);o.stop(t+n[1]+.01);t+=n[1]*.8})}
+  function tapSfx(){if(!actx)return;var t=actx.currentTime,o=actx.createOscillator(),g=actx.createGain();o.type='square';o.frequency.value=mtof(78+(Math.random()*6|0));g.gain.setValueAtTime(.07,t);g.gain.linearRampToValueAtTime(.001,t+.04);o.connect(g);g.connect(actx.destination);o.start(t);o.stop(t+.05)}
 
   const FONT = [[7,5,5,5,7],[2,6,2,2,2],[7,1,7,4,7],[7,1,7,1,7],[5,5,7,1,1],[7,4,7,1,7],[7,4,7,5,7],[7,1,1,1,1],[7,5,7,5,7],[7,5,7,1,7],[7,4,4,4,7],[7,5,7,6,5],[7,4,7,4,7],[5,5,7,5,5],[7,2,2,2,7],[0,2,0,2,0]];
   function drawPx(chars, x, y, sz) {
@@ -239,6 +241,8 @@
         fightTaps = 0;
         fightShake = 0;
         joystickWrap.classList.add('hidden');
+        catchSfx();
+        if(mGn){mGn.gain.cancelScheduledValues(actx.currentTime);mGn.gain.setValueAtTime(mGn.gain.value,actx.currentTime);mGn.gain.linearRampToValueAtTime(.06,actx.currentTime+.3)}
       } else {
         squirrels = squirrels.filter(sq => { if (sq.caught) { score++; return false; } return true; });
       }
@@ -258,6 +262,7 @@
         });
         state = 1;
         joystickWrap.classList.remove('hidden');
+        if(mGn){mGn.gain.cancelScheduledValues(actx.currentTime);mGn.gain.setValueAtTime(mGn.gain.value,actx.currentTime);mGn.gain.linearRampToValueAtTime(.5,actx.currentTime+.3)}
       }
     }
     animT++;
@@ -605,7 +610,7 @@
   canvas.addEventListener('touchstart', e => {
     e.preventDefault();
     if (state === 2) return;
-    if (state === 3) { fightTaps++; fightShake = 14; return; }
+    if (state === 3) { fightTaps++; fightShake = 14; tapSfx(); return; }
     if (!state) startGame();
     update(e.touches[0].clientX, e.touches[0].clientY);
   }, { passive: false });
@@ -614,7 +619,7 @@
   canvas.addEventListener('touchcancel', () => { if (state !== 3) reset(); });
   canvas.addEventListener('mousedown', e => {
     if (state === 2) return;
-    if (state === 3) { fightTaps++; fightShake = 14; return; }
+    if (state === 3) { fightTaps++; fightShake = 14; tapSfx(); return; }
     if (!state) startGame();
     update(e.clientX, e.clientY);
     const mv = ev => { if (state !== 3) update(ev.clientX, ev.clientY); };
