@@ -87,6 +87,11 @@
   const SCOTTY_CX = 0.8, SCOTTY_CY = 0.82, SCOTTY_R = 0.04;
   const fightIdleData = [{"#2f2f2e":[[10,19],[11,19],[12,19],[13,19],[9,20],[14,20],[8,21],[15,21],[16,21],[17,21],[19,21],[20,21],[8,22],[10,22],[15,22],[16,22],[18,22],[20,22],[8,23],[9,23],[11,23],[15,23],[16,23],[20,23],[11,24],[14,24],[16,24],[21,24],[10,25],[13,25],[16,25],[18,25],[21,25],[10,26],[12,26],[17,26],[21,26],[10,27],[12,27],[17,27],[18,27],[21,27],[11,28],[12,28],[14,28],[15,28],[21,28],[12,29],[16,29],[17,29],[20,29],[13,30],[14,30],[17,30],[19,30],[14,31],[15,31],[16,31],[17,31],[18,31],[19,31]],"#a67354":[[10,20],[11,20],[12,20],[9,21],[10,21],[11,21],[12,21],[9,22],[11,22],[17,22],[17,23],[20,26]],"#825235":[[13,20],[13,21],[12,22],[13,22],[12,23],[13,23],[18,23],[19,23],[12,24],[17,24],[18,24],[19,24],[20,24],[15,25],[17,25],[19,25],[20,25],[14,26],[15,26],[16,26],[18,26],[19,26],[13,27],[14,27],[15,27],[16,27],[13,28],[16,28],[17,28],[14,29],[15,29],[16,30],[18,30]],"#694129":[[14,21],[14,22],[19,22],[14,23],[13,24],[15,24],[11,25],[12,25],[14,25],[11,26],[13,26],[11,27],[20,28],[13,29],[15,30]],"#c2bdbd":[[19,27]],"#e4e4e4":[[20,27]],"#b46828":[[18,28],[19,28]],"#da8238":[[18,29],[19,29]]},{"#2f2f2e":[[10,19],[11,19],[12,19],[13,19],[9,20],[14,20],[8,21],[15,21],[8,22],[10,22],[15,22],[16,22],[17,22],[19,22],[20,22],[8,23],[9,23],[11,23],[15,23],[16,23],[18,23],[20,23],[11,24],[14,24],[16,24],[20,24],[10,25],[13,25],[16,25],[21,25],[10,26],[12,26],[16,26],[18,26],[21,26],[10,27],[12,27],[17,27],[21,27],[11,28],[12,28],[14,28],[15,28],[18,28],[21,28],[12,29],[16,29],[17,29],[20,29],[13,30],[14,30],[17,30],[19,30],[14,31],[15,31],[16,31],[17,31],[18,31],[19,31]],"#a67354":[[10,20],[11,20],[12,20],[9,21],[10,21],[11,21],[12,21],[9,22],[11,22],[17,23],[17,24],[20,27]],"#825235":[[13,20],[13,21],[12,22],[13,22],[12,23],[13,23],[12,24],[18,24],[19,24],[15,25],[17,25],[18,25],[19,25],[20,25],[14,26],[15,26],[17,26],[19,26],[20,26],[13,27],[14,27],[15,27],[16,27],[18,27],[19,27],[13,28],[16,28],[17,28],[14,29],[15,29],[16,30],[18,30]],"#694129":[[14,21],[14,22],[14,23],[19,23],[13,24],[15,24],[11,25],[12,25],[14,25],[11,26],[13,26],[11,27],[13,29],[15,30]],"#c2bdbd":[[19,28]],"#e4e4e4":[[20,28]],"#da8238":[[18,29],[19,29]]}];
   const fightIdleFrames = cleanFrames(fightIdleData);
+  const meatData = [{"#7e3b2e":[[9,1],[10,1],[11,1],[12,1],[8,2],[13,2],[7,3],[14,3],[6,4],[14,4],[5,5],[14,5],[5,6],[14,6],[5,7],[13,7],[5,8],[12,8],[4,9],[11,9],[2,10],[3,10],[7,10],[8,10],[9,10],[10,10],[1,11],[6,11],[1,12],[5,12],[2,13],[5,13],[3,14],[4,14]],"#dea07a":[[9,2],[10,2],[11,2],[12,2],[8,3],[13,3],[7,4],[13,4],[6,5],[13,5],[6,6],[7,6],[13,6],[6,7],[7,7],[12,7],[6,8],[7,8],[8,8],[9,8],[11,8],[7,9],[8,9],[9,9],[10,9]],"#e9aa83":[[9,3],[8,4],[7,5],[12,6],[11,7],[10,8]],"#f0b895":[[10,3],[11,3],[12,3],[12,4],[11,5]],"#e9b18d":[[9,4],[10,4],[11,4],[8,5],[9,5],[10,5],[12,5],[8,6],[9,6],[10,6],[11,6],[8,7],[9,7],[10,7]],"#dab6af":[[5,9],[6,10],[2,11],[2,12],[3,12],[3,13],[4,13]],"#f2d0b5":[[6,9]],"#debfb8":[[4,10],[5,10],[3,11],[4,11],[5,11],[4,12]]},{"#7e3b2e":[[3,1],[4,1],[5,1],[6,1],[2,2],[7,2],[1,3],[8,3],[1,4],[9,4],[1,5],[10,5],[1,6],[10,6],[2,7],[10,7],[3,8],[10,8],[4,9],[11,9],[5,10],[6,10],[7,10],[8,10],[12,10],[13,10],[9,11],[14,11],[10,12],[14,12],[10,13],[13,13],[11,14],[12,14]],"#dea07a":[[3,2],[4,2],[5,2],[6,2],[2,3],[7,3],[2,4],[8,4],[2,5],[9,5],[2,6],[8,6],[9,6],[3,7],[8,7],[9,7],[4,8],[6,8],[7,8],[8,8],[9,8],[5,9],[6,9],[7,9],[8,9]],"#f0b895":[[3,3],[4,3],[3,4],[5,4],[3,5]],"#e9b18d":[[5,3],[4,4],[6,4],[4,5],[5,5],[6,5],[7,5],[4,6],[5,6],[6,6],[7,6],[5,7],[6,7],[7,7]],"#e9aa83":[[6,3],[7,4],[8,5],[3,6],[4,7],[5,8]],"#f2d0b5":[[9,9]],"#dab6af":[[10,9],[9,10],[13,11],[12,12],[13,12],[11,13],[12,13]],"#debfb8":[[10,10],[11,10],[10,11],[11,11],[12,11],[11,12]]},{"#442120":[[11,2],[12,2],[13,2],[9,3],[10,3],[14,3],[8,4],[14,4],[7,5],[15,5],[5,6],[6,6],[15,6],[2,7],[3,7],[4,7],[15,7],[1,8],[0,9],[15,9],[0,10],[15,10],[0,11],[15,11],[1,12],[2,12],[15,12],[4,13],[5,13],[6,13],[7,13],[13,13],[14,13],[10,14],[11,14],[12,14]],"#d3c5af":[[11,3],[9,4],[13,4],[13,5],[11,7],[12,7],[2,8],[9,8],[10,8],[13,8],[1,9],[4,9],[5,9],[6,9],[7,9],[13,9],[1,10],[2,11],[3,11],[4,11],[5,11],[6,11],[14,11],[7,12],[8,12],[9,12],[10,12],[11,12],[12,12],[13,12]],"#89302e":[[12,3],[13,3],[10,4],[9,5],[14,5],[8,6],[12,6],[13,6],[14,6],[7,7],[13,7],[14,7],[12,8]],"#9b3837":[[11,4],[12,4],[10,5],[11,5],[12,5],[9,6],[10,6],[11,6],[8,7],[9,7],[10,7],[3,8],[4,8],[5,8],[6,8],[7,8],[8,8],[11,8],[14,8],[2,9],[3,9],[8,9],[9,9],[10,9],[11,9],[12,9],[14,9],[2,10],[3,10],[4,10],[5,10],[6,10],[7,10],[8,10],[9,10],[10,10],[11,10],[12,10],[13,10],[14,10],[7,11],[8,11],[9,11],[10,11],[11,11],[12,11],[13,11]],"#bcaf9a":[[8,5],[7,6],[5,7],[6,7],[1,11],[3,12],[4,12],[5,12],[6,12],[14,12],[8,13],[9,13],[10,13],[11,13],[12,13]],"#471d15":[[15,8],[8,14]],"#4a211c":[[3,13]],"#432120":[[9,14]]},{"#442120":[[11,5],[12,5],[13,5],[3,6],[4,6],[5,6],[6,6],[7,6],[8,6],[9,6],[10,6],[14,6],[2,7],[15,7],[1,8],[15,8],[1,9],[15,9],[2,10],[3,10],[15,10],[4,11],[5,11],[6,11],[7,11],[8,11],[9,11],[10,11],[11,11],[12,11],[13,11],[14,11]],"#9b3837":[[11,6],[12,6],[3,7],[4,7],[5,7],[6,7],[7,7],[8,7],[9,7],[10,7],[3,8],[4,8],[9,8],[10,8],[11,8],[12,8],[14,8],[4,9],[5,9],[6,9],[7,9],[8,9],[9,9],[10,9],[11,9],[12,9],[13,9],[14,9]],"#d3c5af":[[13,6],[11,7],[12,7],[2,8],[5,8],[6,8],[7,8],[8,8],[13,8],[2,9],[8,10],[9,10],[10,10],[11,10],[12,10],[13,10]],"#89302e":[[13,7],[14,7]],"#bcaf9a":[[3,9],[4,10],[5,10],[6,10],[7,10],[14,10]]}];
+  const boneData = [{"#000000":[[2,5],[3,5],[12,5],[13,5],[10,7],[14,8],[1,9],[14,9],[8,10],[10,10],[4,11],[11,11]],"#010000":[[1,6],[4,6],[11,6],[14,6],[0,7],[5,7],[6,7],[7,7],[8,7],[9,7],[15,7],[1,8],[0,10],[5,10],[6,10],[7,10],[9,10],[15,10],[1,11],[14,11],[2,12],[3,12],[12,12],[13,12]],"#cdcece":[[2,6],[3,6],[12,6],[13,6],[1,7],[14,7],[2,8],[13,8],[3,9],[12,9],[1,10],[14,10]],"#f8f9f9":[[2,7],[3,7],[12,7],[13,7],[4,8],[7,8],[8,8],[9,8],[10,8],[11,8],[4,9],[5,9],[6,9],[7,9],[11,9],[2,10],[3,10],[12,10],[13,10]],"#ededed":[[4,7],[11,7],[3,8],[5,8],[6,8],[12,8],[2,9],[8,9],[9,9],[10,9],[13,9],[4,10],[11,10],[2,11],[3,11],[12,11],[13,11]]},{"#050505":[[6,0],[6,6],[9,6],[6,7],[6,8],[9,8],[6,9],[6,10],[9,10],[5,11],[5,14],[7,14]],"#010100":[[9,0],[10,1],[4,2],[11,2],[11,3],[5,4],[9,7],[9,9],[11,12],[11,13],[10,14],[6,15],[9,15]],"#010000":[[5,1]],"#908a84":[[6,1],[9,1],[5,2],[8,2],[10,2],[5,3],[7,3],[10,3],[6,4],[9,4],[8,5],[8,6],[8,7],[7,9],[7,10],[6,11],[9,11],[5,12],[8,12],[10,12],[5,13],[7,13],[10,13],[6,14],[9,14]],"#000000":[[7,1],[8,1],[4,3],[10,4],[6,5],[9,5],[10,11],[4,12],[4,13],[8,14]],"#ada7a2":[[6,2],[7,2],[9,2],[6,3],[8,3],[9,3],[7,4],[8,4],[7,5],[7,6],[7,7],[7,8],[8,8],[8,9],[8,10],[7,11],[8,11],[6,12],[7,12],[9,12],[6,13],[8,13],[9,13]]},{"#010000":[[6,0],[9,0],[5,1],[10,1],[11,2],[11,3],[5,4],[6,6],[9,6],[6,7],[6,8],[9,8],[6,9],[9,9],[6,10],[9,10],[5,11],[11,12],[11,13],[5,14],[7,14],[10,14],[6,15],[9,15]],"#cdcece":[[6,1],[9,1],[5,2],[7,2],[5,3],[8,3],[5,12],[8,12],[5,13],[7,13],[6,14],[9,14]],"#000000":[[7,1],[8,1],[4,2],[4,3],[10,4],[6,5],[9,5],[9,7],[10,11],[4,12],[4,13],[8,14]],"#f8f9f9":[[6,2],[9,2],[6,3],[9,3],[7,4],[8,4],[7,5],[7,6],[7,7],[7,8],[8,8],[8,9],[8,10],[7,11],[8,11],[6,12],[9,12],[6,13],[9,13]],"#ededed":[[8,2],[10,2],[7,3],[10,3],[6,4],[9,4],[8,5],[8,6],[8,7],[7,9],[7,10],[6,11],[9,11],[7,12],[10,12],[8,13],[10,13]]},{"#010100":[[2,4],[3,4],[12,4],[13,4],[1,5],[14,5],[0,6],[7,6],[9,6],[15,6],[15,9],[4,10],[2,11]],"#908a84":[[2,5],[3,5],[12,5],[13,5],[1,6],[4,6],[11,6],[14,6],[2,7],[5,7],[6,7],[7,7],[12,7],[3,8],[9,8],[10,8],[13,8],[1,9],[4,9],[11,9],[14,9],[2,10],[3,10],[12,10],[13,10]],"#000000":[[4,5],[11,5],[5,6],[1,7],[14,7],[1,8],[5,9],[3,11],[12,11],[13,11]],"#ada7a2":[[2,6],[3,6],[12,6],[13,6],[3,7],[4,7],[8,7],[9,7],[10,7],[11,7],[13,7],[2,8],[4,8],[5,8],[6,8],[7,8],[8,8],[11,8],[12,8],[2,9],[3,9],[12,9],[13,9]],"#050505":[[6,6],[8,6],[10,6],[14,8],[0,9],[6,9],[7,9],[8,9],[9,9],[10,9],[11,10],[14,10]],"#010000":[[1,10]]}];
+  const MTP = 3, MTW = 16, MTH = 16;
+  let pickups = [], pickupTimer = 0, powerT = 0, powerScale = 1, speedT = 0, speedMul = 1;
+  let sparkles = [], puNotify = 0;
   let sqMove = null, animT = 0;
   const SQP = 2, SQW = 32, SQH = 32;
   const SCP = 3, SCW = 28, SCH = 28;
@@ -115,6 +120,7 @@
   function stopMus(){clearTimeout(mTm);if(mGn){mGn.gain.cancelScheduledValues(actx.currentTime);mGn.gain.setValueAtTime(mGn.gain.value,actx.currentTime);mGn.gain.linearRampToValueAtTime(.001,actx.currentTime+.3)}}
   function endSfx(){if(!actx)return;var t=actx.currentTime+.4;[[71,.18],[67,.18],[64,.28],[57,.9]].forEach(function(n){var o=actx.createOscillator(),g=actx.createGain();o.type='triangle';o.frequency.value=mtof(n[0]);g.gain.setValueAtTime(.15,t);g.gain.linearRampToValueAtTime(.001,t+n[1]);o.connect(g);g.connect(actx.destination);o.start(t);o.stop(t+n[1]+.01);t+=n[1]})}
   function catchSfx(){if(!actx)return;var t=actx.currentTime;[[72,.06],[76,.06],[79,.06],[84,.12]].forEach(function(n){var o=actx.createOscillator(),g=actx.createGain();o.type='square';o.frequency.value=mtof(n[0]);g.gain.setValueAtTime(.1,t);g.gain.linearRampToValueAtTime(.001,t+n[1]);o.connect(g);g.connect(actx.destination);o.start(t);o.stop(t+n[1]+.01);t+=n[1]*.8})}
+  function meatSfx(){if(!actx)return;var t=actx.currentTime;[[60,.07],[64,.07],[67,.07],[72,.07],[76,.14]].forEach(function(n){var o=actx.createOscillator(),g=actx.createGain();o.type='triangle';o.frequency.value=mtof(n[0]);g.gain.setValueAtTime(.13,t);g.gain.linearRampToValueAtTime(.001,t+n[1]);o.connect(g);g.connect(actx.destination);o.start(t);o.stop(t+n[1]+.01);t+=n[1]*.75})}
   function tapSfx(){if(!actx)return;var t=actx.currentTime,o=actx.createOscillator(),g=actx.createGain();o.type='square';o.frequency.value=mtof(78+(Math.random()*6|0));g.gain.setValueAtTime(.07,t);g.gain.linearRampToValueAtTime(.001,t+.04);o.connect(g);g.connect(actx.destination);o.start(t);o.stop(t+.05)}
 
   const FONT = [[7,5,5,5,7],[2,6,2,2,2],[7,1,7,4,7],[7,1,7,1,7],[5,5,7,1,1],[7,4,7,1,7],[7,4,7,5,7],[7,1,1,1,1],[7,5,7,5,7],[7,5,7,1,7],[7,4,4,4,7],[7,5,7,6,5],[7,4,7,4,7],[5,5,7,5,5],[7,2,2,2,7],[0,2,0,2,0]];
@@ -222,7 +228,8 @@
       vel.x = vel.x * FR + ax;
       vel.y = vel.y * FR + ay;
       const s2 = Math.sqrt(vel.x * vel.x + vel.y * vel.y);
-      if (s2 > SCOTTY_SPEED) { vel.x = vel.x / s2 * SCOTTY_SPEED; vel.y = vel.y / s2 * SCOTTY_SPEED; }
+      const mspd = SCOTTY_SPEED * speedMul;
+      if (s2 > mspd) { vel.x = vel.x / s2 * mspd; vel.y = vel.y / s2 * mspd; }
       let nx = pos.x + vel.x, ny = pos.y + vel.y;
       if (hitTree(nx, pos.y)) { nx = pos.x; vel.x = 0; }
       if (hitTree(nx, ny)) { ny = pos.y; vel.y = 0; }
@@ -246,7 +253,7 @@
         if (hitTree(snx, sq.y)) { snx = sq.x; sq.vx *= -0.5; }
         if (hitTree(snx, sny)) { sny = sq.y; sq.vy *= -0.5; }
         sq.x = snx; sq.y = sny;
-        if (dist < 28) sq.caught = true;
+        if (dist < 28 * powerScale) sq.caught = true;
       });
       const anyCaught = squirrels.some(sq => sq.caught);
       if (anyCaught) {
@@ -287,6 +294,40 @@
       timer += bonusSeconds;
       rewardOverlay = false;
       timerFlashEndTime = Date.now() + 500;
+    }
+    // Pickup powerup logic
+    if (state === 1) {
+      pickupTimer++;
+      if (pickupTimer >= 480) {
+        pickupTimer = 0;
+        const angle = Math.random() * Math.PI * 2;
+        const r = 100 + Math.random() * 200;
+        const mx = pos.x + Math.cos(angle) * r;
+        const my = pos.y + Math.sin(angle) * r;
+        const kind = Math.random() < 0.5 ? 0 : 1; // 0=meat, 1=bone
+        if (!hitTree(mx, my)) { pickups.push({ x: mx, y: my, type: Math.random() * 4 | 0, kind: kind, born: animT }); puNotify = 90; }
+      }
+      pickups = pickups.filter(m => {
+        if (animT - m.born > 180) return false;
+        const dx = pos.x - m.x, dy = pos.y - m.y;
+        if (dx * dx + dy * dy < 30 * 30) {
+          if (m.kind === 0) { powerT = 180; } else { speedT = 180; }
+          meatSfx();
+          return false;
+        }
+        return true;
+      });
+      if (powerT > 0) { powerT--; powerScale += (1.8 - powerScale) * 0.15; }
+      else { powerScale += (1 - powerScale) * 0.15; }
+      if (speedT > 0) { speedT--; speedMul += (1.6 - speedMul) * 0.15; }
+      else { speedMul += (1 - speedMul) * 0.15; }
+      // Sparkle particles for speed boost
+      if (speedT > 0 && animT % 3 === 0) {
+        const a = Math.random() * Math.PI * 2, sr = 20 + Math.random() * 15;
+        sparkles.push({ x: pos.x + Math.cos(a) * sr, y: pos.y + Math.sin(a) * sr, life: 20, dx: Math.cos(a) * 0.5, dy: -1 - Math.random() });
+      }
+      sparkles = sparkles.filter(s => { s.x += s.dx; s.y += s.dy; return --s.life > 0; });
+      if (puNotify > 0) puNotify--;
     }
     animT++;
     if (state < 2 || state === 3 || state === 1) draw();
@@ -498,21 +539,42 @@
         }
       }
     }
-    function drawScotty(x, y, flip, fi) {
+    function drawScotty(x, y, flip, fi, scale) {
+      const s = scale || 1;
+      const sp = SCP * s;
       const frame = scottyFrames[fi % scottyFrames.length];
-      const ox = x - (SCW * SCP) / 2;
-      const oy = y - SCH * SCP + 10;
+      const ox = x - (SCW * sp) / 2;
+      const oy = y - SCH * sp + 10 * s;
       for (const c in frame) {
         ctx.fillStyle = c;
         const pts = frame[c];
         for (let i = 0; i < pts.length; i++) {
           const p = pts[i];
           const px = flip ? (SCW - 1 - p[0]) : p[0];
-          ctx.fillRect(ox + px * SCP, oy + p[1] * SCP, SCP, SCP);
+          ctx.fillRect(ox + px * sp, oy + p[1] * sp, Math.ceil(sp), Math.ceil(sp));
+        }
+      }
+    }
+    function drawPickup(m) {
+      const sc = toScreen(m.x, m.y);
+      const age = animT - m.born;
+      if (age > 120 && (animT % 8 < 4)) return;
+      const bob = Math.sin(animT * 0.08) * 4;
+      const data = m.kind === 0 ? meatData : boneData;
+      const frame = data[m.type];
+      const ox = sc.x - (MTW * MTP) / 2;
+      const oy = sc.y - MTH * MTP + bob;
+      for (const c in frame) {
+        ctx.fillStyle = c;
+        const pts = frame[c];
+        for (let i = 0; i < pts.length; i++) {
+          const p = pts[i];
+          ctx.fillRect(ox + p[0] * MTP, oy + p[1] * MTP, MTP, MTP);
         }
       }
     }
     function drawEnt(e) {
+      if (e.t === 2) { drawPickup(e.meat); return; }
       const sc = toScreen(e.x, e.y);
       if (e.t) {
         ctx.fillStyle = 'rgba(0,0,0,0.18)';
@@ -530,15 +592,33 @@
         }
       } else {
         ctx.fillStyle = 'rgba(0,0,0,0.22)';
-        ctx.beginPath(); ctx.ellipse(sc.x, sc.y + 12, 18, 6, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(sc.x, sc.y + 12, 18 * powerScale, 6 * powerScale, 0, 0, Math.PI * 2); ctx.fill();
         const spd2 = e.vx * e.vx + (e.vy || 0) * (e.vy || 0);
         const flip = e.vx < -0.05;
         const fi = spd2 > 0.5 ? (animT / 6 | 0) % scottyFrames.length : 0;
-        drawScotty(sc.x, sc.y, flip, fi);
+        drawScotty(sc.x, sc.y, flip, fi, powerScale);
+        if (powerT > 0) {
+          ctx.strokeStyle = 'rgba(255,200,50,' + (0.25 + Math.sin(animT * 0.15) * 0.15) + ')';
+          ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.ellipse(sc.x, sc.y - 20 * powerScale, 22 * powerScale, 30 * powerScale, 0, 0, Math.PI * 2); ctx.stroke();
+        }
+        if (speedT > 0) {
+          sparkles.forEach(s => {
+            const ss = toScreen(s.x, s.y);
+            const a = s.life / 20;
+            const sz = 2 + a * 3;
+            ctx.fillStyle = 'rgba(180,230,255,' + a + ')';
+            ctx.fillRect(ss.x - sz / 2, ss.y - sz / 2, sz, sz);
+          });
+          ctx.strokeStyle = 'rgba(180,230,255,' + (0.2 + Math.sin(animT * 0.2) * 0.15) + ')';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath(); ctx.ellipse(sc.x, sc.y - 15, 20, 28, 0, 0, Math.PI * 2); ctx.stroke();
+        }
       }
     }
     const ents = [{x: pos.x, y: pos.y, t: 0, vx: vel.x, vy: vel.y}];
     squirrels.forEach(sq => ents.push({x: sq.x, y: sq.y, t: 1, vx: sq.vx, vy: sq.vy}));
+    pickups.forEach(m => ents.push({x: m.x, y: m.y, t: 2, meat: m}));
     ents.sort((a, b) => a.y - b.y);
     let ei = 0;
     for (let cy = cy0; cy <= cy1; cy++) {
@@ -588,6 +668,16 @@
       ctx.fillText(fightTaps + ' taps', W / 2, H * 0.38);
       ctx.textAlign = 'left';
     }
+    if (puNotify > 0) {
+      const a = Math.min(1, puNotify / 30);
+      ctx.globalAlpha = a;
+      ctx.fillStyle = '#e8c547';
+      ctx.font = '12px "Press Start 2P"';
+      ctx.textAlign = 'center';
+      ctx.fillText('PowerUp Spawned!', W / 2, 30);
+      ctx.textAlign = 'left';
+      ctx.globalAlpha = 1;
+    }
   }
 
   const endOv = document.getElementById('endOverlay');
@@ -613,6 +703,7 @@
     stopMus(); clearInterval(sId);
     state = 0; timer = 15; score = 0;
     pos.x = pos.y = vel.x = vel.y = cam.x = cam.y = joy.x = joy.y = 0;
+    pickups = []; pickupTimer = 0; powerT = 0; powerScale = 1; speedT = 0; speedMul = 1; sparkles = []; puNotify = 0;
     squirrels = [];
     for (let i = 0; i < 8; i++) squirrels.push(spawnSquirrel());
     for (const k in chunks) delete chunks[k];
