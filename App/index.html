@@ -69,6 +69,15 @@
   }
   for (let i = 0; i < 3; i++) squirrels.push(spawnSquirrel());
   let state = 0, timer = 30, tId = 0, score = 0, hiScore = 0;
+  let sqMove = null, animT = 0;
+  const SQP = 2, SQW = 32, SQH = 32;
+  function cleanFrames(frames) {
+    return frames.filter(fr => {
+      for (const c in fr) if (fr[c] && fr[c].length) return true;
+      return false;
+    });
+  }
+  fetch('move.txt').then(r => r.json()).then(move => { sqMove = cleanFrames(move); });
   const FONT = [[7,5,5,5,7],[2,6,2,2,2],[7,1,7,4,7],[7,1,7,1,7],[5,5,7,1,1],[7,4,7,1,7],[7,4,7,5,7],[7,1,1,1,1],[7,5,7,5,7],[7,5,7,1,7],[7,4,4,4,7],[7,5,7,6,5],[7,4,7,4,7],[5,5,7,5,5],[7,2,2,2,7],[0,2,0,2,0]];
   function drawPx(chars, x, y, sz) {
     chars.forEach((d, di) => {
@@ -192,6 +201,7 @@
       cam.x += (pos.x - cam.x) * 0.1;
       cam.y += (pos.y - cam.y) * 0.1;
     }
+    animT++;
     if (state < 2) draw();
   }
 
@@ -331,16 +341,35 @@
         ctx.fillRect(s.x + dx * P, s.y - dy * P, P, P);
       });
     }
+    function drawSqFrame(frame, x, y, flip) {
+      const ox = x - (SQW * SQP) / 2;
+      const oy = y - SQH * SQP + 6;
+      for (const c in frame) {
+        ctx.fillStyle = c;
+        const pts = frame[c];
+        for (let i = 0; i < pts.length; i++) {
+          const p = pts[i];
+          const px = flip ? (SQW - 1 - p[0]) : p[0];
+          ctx.fillRect(ox + px * SQP, oy + p[1] * SQP, SQP, SQP);
+        }
+      }
+    }
     function drawEnt(e) {
       const sc = toScreen(e.x, e.y);
       if (e.t) {
         ctx.fillStyle = 'rgba(0,0,0,0.18)';
         ctx.beginPath(); ctx.ellipse(sc.x, sc.y + 8, 12, 4, 0, 0, Math.PI * 2); ctx.fill();
-        ctx.save(); ctx.translate(sc.x, sc.y);
-        ctx.fillStyle = '#4a8';
-        ctx.beginPath(); ctx.arc(0, 0, 10, 0, Math.PI * 2); ctx.fill();
-        ctx.strokeStyle = 'rgba(20,60,30,0.5)'; ctx.lineWidth = 2; ctx.stroke();
-        ctx.restore();
+        if (sqMove) {
+          const fi = (animT / 6 | 0) % sqMove.length;
+          const flip = e.vx < -0.05;
+          drawSqFrame(sqMove[fi], sc.x, sc.y, flip);
+        } else {
+          ctx.save(); ctx.translate(sc.x, sc.y);
+          ctx.fillStyle = '#4a8';
+          ctx.beginPath(); ctx.arc(0, 0, 10, 0, Math.PI * 2); ctx.fill();
+          ctx.strokeStyle = 'rgba(20,60,30,0.5)'; ctx.lineWidth = 2; ctx.stroke();
+          ctx.restore();
+        }
       } else {
         ctx.fillStyle = 'rgba(0,0,0,0.22)';
         ctx.beginPath(); ctx.ellipse(sc.x, sc.y + 12, 18, 6, 0, 0, Math.PI * 2); ctx.fill();
@@ -352,7 +381,7 @@
       }
     }
     const ents = [{x: pos.x, y: pos.y, t: 0}];
-    squirrels.forEach(sq => ents.push({x: sq.x, y: sq.y, t: 1}));
+    squirrels.forEach(sq => ents.push({x: sq.x, y: sq.y, t: 1, vx: sq.vx, vy: sq.vy}));
     ents.sort((a, b) => a.y - b.y);
     let ei = 0;
     for (let cy = cy0; cy <= cy1; cy++) {
