@@ -1,0 +1,148 @@
+---
+description: Core project context for the Scotty the Terrier game — architecture, systems, and conventions
+alwaysApply: true
+---
+
+# TartanHacks - Scotty the Terrier Game
+
+## Project Overview
+
+A mobile-friendly HTML5 canvas game built for TartanHacks. Single-file (`index.html`), no frameworks or dependencies. The player controls Scotty (gold circle) chasing squirrels in a retro/pixelated infinite world.
+
+## Tech Stack
+
+- **Single-file HTML/CSS/JS** (`App/index.html`) — no build tools
+- **HTML5 Canvas** (2D context) for all world rendering
+- **Virtual joystick** (HTML/CSS) for touch/mouse input
+- **Pixel bitmap font** for HUD text (digits + letters drawn via `drawPx`)
+- Mobile-first with `touch-action: none` and `user-scalable=no`
+- **Google Fonts**: Press Start 2P for overlay UI text
+
+## Repository Structure
+
+```
+App/
+  index.html          — The entire game (HTML + CSS + JS in one file, ~494 lines)
+  move.txt            — Squirrel walking animation sprite data (JSON, 8 frames)
+idle.txt              — Squirrel idle animation sprite data (JSON, 6 frames, not yet used)
+extract_squirrel_pixels.py  — Python tool to extract pixel data from sprite sheet PNG
+extract_and_serve.sh  — Bash script to decompress archive + serve via Python HTTP
+Squirrel Sprite Sheet.png   — Source sprite sheet for squirrel animations
+app.tar.br            — Brotli-compressed tarball of the App/ directory
+```
+
+## Architecture
+
+- All logic lives in an IIFE inside `App/index.html`
+- Game loop at 60fps via `setInterval(tick, 1000/60)`
+- Camera follows Scotty with lerp lag (`cam += (pos - cam) * 0.1`)
+- `toScreen(wx, wy)` projects world coords to screen with `TILT` (0.75) Y-compression
+- Compact variable names: `pos`=player position, `vel`=velocity, `cam`=camera, `joy`=joystick, `W/H`=screen dimensions
+
+## Game States
+
+- **State 0 (idle)**: Start overlay visible ("SCOTTY" title + "TAP TO PLAY"), world rendered behind blurred overlay, timer shows 30, nothing moves.
+- **State 1 (playing)**: Overlay hidden, joystick visible, 30-second countdown, player + squirrels move, score tracked.
+- **State 2 (ended)**: Everything frozen, canvas CSS-blurred, white fog overlay, "PLAY AGAIN" button + final score shown.
+- First click/tap transitions 0→1 (starts timer). Timer=0 transitions 1→2. "Play Again" resets to 0.
+
+## Player Movement
+
+- **Acceleration-based**: joystick controls acceleration, not velocity directly
+- **Forward/lateral split**: `AF=0.7` (forward accel), `AL=0.25` (lateral/turning accel) — easy to speed up, harder to change direction
+- **Friction**: `FR=0.96` per frame
+- **Max speed**: `MSPD=12`
+- **Tree collision**: axis-separated resolution via `hitTree(x,y)` — checks player bounding circle (r=14) against tree chunks. Squirrels also collide with trees.
+
+## Map System
+
+- **Chunk-based**: world divided into 80×80 unit squares (`CHUNK=80`)
+- **Pixelated ground**: each chunk is an offscreen canvas with 8×8 grid of 10px pixels in varied greens (base ~rgb(40,170,40) ±5)
+- **Lazy generation**: chunks created on first access via `getChunk(cx,cy)`, cached in `chunks` object keyed by `"cx,cy"`
+- **Visibility culling**: only chunks within screen bounds (+1 margin) are drawn each frame
+- **Spawn zone**: ~5×5 chunk area centered at origin is always clear of decorations (cx/cy both in range -2..2)
+- **Anti-clumping**: `nearbyDecos(cx,cy)` counts decorated chunks in radius R=4; decoration probability decreases with nearby count
+
+## Decorations — Pixel Art System
+
+All decorations use **P=3 pixel size** (3×3 screen pixels per art pixel). Each decoration is defined as coordinate arrays `[dx, dy]` where dy points upward. Drawn via `fillRect` at `(screenX + dx*P, screenY - dy*P, P, P)`.
+
+### Grass (`gFill` / `gOut`)
+- **Shape**: 3-blade W-pattern, ~9×6 grid units (27×18px)
+- **Colors**: flat green `rgb(35,170,35)` fill, dark green `rgb(15,85,12)` outline
+
+### Bushes (`bFill` / `bOut`)
+- **Shape**: two front blobs + middle back bump, ~22×12 grid units (66×36px)
+- **Colors**: textured green with per-pixel variance (stored as `bv` array of 90 random values ±20), dark outline
+- **Position**: centered in chunk (`CHUNK/2 - 27, CHUNK/2`)
+
+### Trees (`tTrk` + `tLf` / `tOut`)
+- **Shape**: brown trunk (4-wide base narrowing to 2-wide, 8 tall) + green oval canopy (12-wide, 10 tall), total ~14×18 grid units (42×54px)
+- **Colors**: trunk = textured brown `rgb(110±v, 70±v, 35±v)`, canopy = textured green `rgb(30±v, 130±v, 30±v)`, dark outline `rgb(20,50,15)`
+- **Collision**: entire chunk blocked — player and squirrels cannot enter tree chunks
+
+### Pebbles (`pFl` / `pOt`)
+- **Shape**: flat oval, ~8×5 grid units (24×15px)
+- **Colors**: textured warm gray `rgb(120±v, 118±v, 112±v)`, dark gray outline `rgb(50,50,45)`
+- **Generation**: independent 6% chance per chunk (can coexist with other decorations)
+
+### Decoration Drawing Order
+1. Ground chunks (all visible)
+2. Pebbles (flat, drawn first in decoration pass)
+3. Grass, bushes, trees sorted by chunk row (back-to-front)
+4. Entities (player + squirrels) depth-sorted by Y position, interleaved with decoration rows
+5. HUD (timer, score, high score) drawn last on top
+
+## Squirrels
+
+- **3 squirrels** spawned in a ring around origin (`SPAWN_RADIUS=1.8*CHUNK`, ±`SPAWN_RING=40`)
+- **Sprite animation**: loaded from `move.txt` — 8 frames of pixel data (color→coordinate maps), drawn at `SQP=2` pixel scale on a 32×32 grid. Supports horizontal flip based on velocity direction. Falls back to green circle (radius 10, `#4a8`) if sprite data hasn't loaded.
+- **AI**: flee when player < 2.5 chunks away, approach when > 4 chunks, wander randomly otherwise
+- **Speed**: max 8 (player max is 12), friction 0.95, accel 0.4
+- **Tree collision**: bounce off tree chunks (velocity *= -0.5)
+- **Catch**: removed when player center within 28 units; increments `score`
+
+## HUD & Pixel Font
+
+- **FONT array**: 3×5 bitmap font, each glyph = 5 rows of 3-bit values. Indices 0-9 = digits, 10=C, 11=R, 12=E, 13=H, 14=I, 15=colon. S reuses 5, O reuses 0.
+- **`drawPx(chars, x, y, sz)`**: draws array of font indices with black outline + gold fill at given pixel size
+- **Timer**: top-right, sz=5 (two digits)
+- **Score**: below timer, sz=3 ("SCORE:X"), right-aligned
+- **High score**: below score, sz=3 ("HI:X"), shown only when hiScore > 0
+- **End screen score**: HTML div styled with 6px monospace scaled 3×
+
+## Joystick
+
+- Click/tap anywhere on canvas to activate joystick; knob follows input clamped to base radius
+- Dragging beyond base radius keeps knob at edge
+- Transparent bluish-white radial gradients with opaque boundaries
+- Resets to center on release (mouseup/touchend/touchcancel)
+- Base radius: 50px, knob max offset: 28px
+
+## Sprite Extraction Pipeline
+
+- `extract_squirrel_pixels.py` uses Pillow to extract pixel data from `Squirrel Sprite Sheet.png`
+- Outputs JSON arrays of `{color: [[x,y], ...]}` per frame
+- Supports `--frame`, `--frames` (range/list), `--group-by-color`, `--compact`
+- Frame size: 32×32 by default
+- Output stored in `move.txt` (walking) and `idle.txt` (idle, not yet integrated)
+
+## Build & Size Check
+
+When asked to check the byte size, run these commands and update the current size below:
+
+```bash
+rm -f app.tar.br && tar -cf - -C App index.html | brotli -q 11 -o app.tar.br && stat -f %z app.tar.br
+```
+
+**Current compressed size: 5046 bytes**
+
+The game also ships as `app.tar.br` which can be extracted and served using `extract_and_serve.sh`.
+
+## Style Guide
+
+- Gold/amber UI theme (`#e8c547`)
+- Retro/pixelated aesthetic throughout (Press Start 2P font, pixel art, bitmap HUD)
+- Keep the game lightweight — minimize code size
+- Compact variable names (pos, vel, cam, joy, W, H, etc.)
+- All game code in a single IIFE — no modules, no imports, no build step
