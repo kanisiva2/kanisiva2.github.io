@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-  <title>Game</title>
+  <title>Scotty vs. Squirrels</title>
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; touch-action: none; user-select: none; }
@@ -14,7 +14,8 @@
     #startOverlay { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 32px; padding: 24px; background: rgba(0,0,0,0.25); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 25; cursor: pointer; font-family: 'Press Start 2P', monospace; -webkit-font-smoothing: none; image-rendering: pixelated; }
     #startOverlay.hidden { display: none !important; }
     #startOverlay .gameTitle { font-size: clamp(22px, 7vw, 42px); color: #e8c547; text-shadow: 3px 3px 0 #5c4a20; }
-    #startOverlay .tapToPlay { font-size: clamp(14px, 4.5vw, 24px); color: #fff; text-shadow: 2px 2px 0 rgba(0,0,0,0.4); animation: bounce 1s ease-in-out infinite; }
+    #startOverlay .tagline { font-size: clamp(12px, 3.5vw, 20px); color: #fff; text-shadow: 2px 2px 0 rgba(0,0,0,0.4); }
+    #startOverlay .tapToPlay { font-size: clamp(14px, 4.5vw, 24px); color: #fff; text-shadow: 2px 2px 0 rgba(0,0,0,0.4); animation: bounce 1s ease-in-out infinite; margin-top: 28px; }
     #startOverlay { touch-action: manipulation; }
     #joystickWrap { position: absolute; bottom: 56px; left: 50%; transform: translateX(-50%); z-index: 30; }
     #joystickWrap.hidden { display: none !important; }
@@ -32,7 +33,8 @@
   <div id="gameBox">
     <canvas id="gameCanvas"></canvas>
     <div id="startOverlay">
-      <div class="gameTitle">SCOTTY</div>
+      <div class="gameTitle">Scotty vs. Squirrels</div>
+      <div class="tagline">Catch the squirrels!</div>
       <div class="tapToPlay">TAP TO PLAY</div>
     </div>
     <div id="joystickWrap" class="hidden">
