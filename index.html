@@ -73,7 +73,7 @@
   let state = 0, timer = 30, tId = 0, score = 0, hiScore = 0;
   let fightEndTime = 0, fightTaps = 0, fightShake = 0;
   const FIGHT_DURATION_MS = 5000;
-  const SQUIRREL_CX = 0.22, SQUIRREL_CY = 0, SQUIRREL_R = 0.22;
+  const SQUIRREL_CX = 0.5, SQUIRREL_CY = -0.1, SQUIRREL_R = 0.22;
   const SCOTTY_CX = 0.8, SCOTTY_CY = 0.82, SCOTTY_R = 0.04;
   const fightIdleData = [{"#2f2f2e":[[10,19],[11,19],[12,19],[13,19],[9,20],[14,20],[8,21],[15,21],[16,21],[17,21],[19,21],[20,21],[8,22],[10,22],[15,22],[16,22],[18,22],[20,22],[8,23],[9,23],[11,23],[15,23],[16,23],[20,23],[11,24],[14,24],[16,24],[21,24],[10,25],[13,25],[16,25],[18,25],[21,25],[10,26],[12,26],[17,26],[21,26],[10,27],[12,27],[17,27],[18,27],[21,27],[11,28],[12,28],[14,28],[15,28],[21,28],[12,29],[16,29],[17,29],[20,29],[13,30],[14,30],[17,30],[19,30],[14,31],[15,31],[16,31],[17,31],[18,31],[19,31]],"#a67354":[[10,20],[11,20],[12,20],[9,21],[10,21],[11,21],[12,21],[9,22],[11,22],[17,22],[17,23],[20,26]],"#825235":[[13,20],[13,21],[12,22],[13,22],[12,23],[13,23],[18,23],[19,23],[12,24],[17,24],[18,24],[19,24],[20,24],[15,25],[17,25],[19,25],[20,25],[14,26],[15,26],[16,26],[18,26],[19,26],[13,27],[14,27],[15,27],[16,27],[13,28],[16,28],[17,28],[14,29],[15,29],[16,30],[18,30]],"#694129":[[14,21],[14,22],[19,22],[14,23],[13,24],[15,24],[11,25],[12,25],[14,25],[11,26],[13,26],[11,27],[20,28],[13,29],[15,30]],"#c2bdbd":[[19,27]],"#e4e4e4":[[20,27]],"#b46828":[[18,28],[19,28]],"#da8238":[[18,29],[19,29]]},{"#2f2f2e":[[10,19],[11,19],[12,19],[13,19],[9,20],[14,20],[8,21],[15,21],[8,22],[10,22],[15,22],[16,22],[17,22],[19,22],[20,22],[8,23],[9,23],[11,23],[15,23],[16,23],[18,23],[20,23],[11,24],[14,24],[16,24],[20,24],[10,25],[13,25],[16,25],[21,25],[10,26],[12,26],[16,26],[18,26],[21,26],[10,27],[12,27],[17,27],[21,27],[11,28],[12,28],[14,28],[15,28],[18,28],[21,28],[12,29],[16,29],[17,29],[20,29],[13,30],[14,30],[17,30],[19,30],[14,31],[15,31],[16,31],[17,31],[18,31],[19,31]],"#a67354":[[10,20],[11,20],[12,20],[9,21],[10,21],[11,21],[12,21],[9,22],[11,22],[17,23],[17,24],[20,27]],"#825235":[[13,20],[13,21],[12,22],[13,22],[12,23],[13,23],[12,24],[18,24],[19,24],[15,25],[17,25],[18,25],[19,25],[20,25],[14,26],[15,26],[17,26],[19,26],[20,26],[13,27],[14,27],[15,27],[16,27],[18,27],[19,27],[13,28],[16,28],[17,28],[14,29],[15,29],[16,30],[18,30]],"#694129":[[14,21],[14,22],[14,23],[19,23],[13,24],[15,24],[11,25],[12,25],[14,25],[11,26],[13,26],[11,27],[13,29],[15,30]],"#c2bdbd":[[19,28]],"#e4e4e4":[[20,28]],"#da8238":[[18,29],[19,29]]}];
   const fightIdleFrames = cleanFrames(fightIdleData);
@@ -212,6 +212,7 @@
         fightEndTime = Date.now() + FIGHT_DURATION_MS;
         fightTaps = 0;
         fightShake = 0;
+        joystickWrap.classList.add('hidden');
       } else {
         squirrels = squirrels.filter(sq => { if (sq.caught) { score++; return false; } return true; });
       }
@@ -230,6 +231,7 @@
           return true;
         });
         state = 1;
+        joystickWrap.classList.remove('hidden');
       }
     }
     animT++;
@@ -248,7 +250,7 @@
       const sqX = W * SQUIRREL_CX, sqY = H * SQUIRREL_CY, sqR = Math.min(W, H) * SQUIRREL_R;
       if (fightIdleFrames && fightIdleFrames.length) {
         const fi = (animT / 8 | 0) % fightIdleFrames.length;
-        const size = Math.min(W, H) * 1.2;
+        const size = Math.min(W, H) * 1.45;
         const fightSQP = size / 32;
         const ox = sqX - size / 2;
         const oy = sqY - size / 2;
@@ -265,23 +267,14 @@
           }
         }
         const pulse = 0.85 + Math.sin(animT * 0.15) * 0.15;
-        const ringR = size * 0.10;
-        const ringY = sqY + size * 0.30;
+        const ringR = size * 0.15;
+        const ringY = sqY + size * 0.32;
         ctx.strokeStyle = 'rgba(255,220,80,0.9)';
         ctx.lineWidth = 4;
         ctx.beginPath(); ctx.arc(sqX, ringY, ringR * pulse, 0, Math.PI * 2); ctx.stroke();
         ctx.strokeStyle = 'rgba(255,180,0,0.6)';
         ctx.lineWidth = 2;
         ctx.beginPath(); ctx.arc(sqX, ringY, ringR * pulse + 6, 0, Math.PI * 2); ctx.stroke();
-        const tapY = sqY - size * 0.6 - Math.abs(Math.sin(animT * 0.2)) * 8;
-        ctx.fillStyle = '#fff';
-        ctx.strokeStyle = '#e8c547';
-        ctx.lineWidth = 3;
-        ctx.font = 'bold 20px "Press Start 2P"';
-        ctx.textAlign = 'center';
-        ctx.strokeText('TAP!', sqX, tapY);
-        ctx.fillText('TAP!', sqX, tapY);
-        ctx.textAlign = 'left';
       } else {
         ctx.fillStyle = '#5a4a3a';
         ctx.beginPath(); ctx.ellipse(sqX, sqY + sqR * 0.3, sqR * 1.1, sqR * 0.9, 0, 0, Math.PI * 2); ctx.fill();
@@ -290,15 +283,26 @@
         ctx.fillStyle = '#000';
         ctx.beginPath(); ctx.arc(sqX - sqR * 0.25, sqY - sqR * 0.6, sqR * 0.12, 0, Math.PI * 2); ctx.arc(sqX + sqR * 0.25, sqY - sqR * 0.6, sqR * 0.12, 0, Math.PI * 2); ctx.fill();
       }
-      const scX = W * SCOTTY_CX, scY = H * SCOTTY_CY, scR = Math.min(W, H) * SCOTTY_R;
-      ctx.fillStyle = '#4a8';
-      ctx.beginPath(); ctx.arc(scX, scY, scR, 0, Math.PI * 2); ctx.fill();
-      const left = Math.ceil((fightEndTime - Date.now()) / 1000);
+      const secLeft = Math.ceil((fightEndTime - Date.now()) / 1000);
+      const bounceY = Math.abs(Math.sin(animT * 0.12)) * 12;
       ctx.fillStyle = '#e8c547';
-      ctx.font = '16px "Press Start 2P"';
-      ctx.fillText('TAP THE SQUIRREL!', W / 2 - 140, H * 0.55);
-      ctx.fillText(left + 's', W / 2 - 20, H * 0.65);
-      ctx.fillText('TAPS: ' + fightTaps, W / 2 - 50, H * 0.75);
+      ctx.font = '26px "Press Start 2P"';
+      ctx.textAlign = 'center';
+      ctx.fillText('Tap the squirrel!', W / 2, H * 0.72 + bounceY);
+      ctx.fillStyle = 'rgba(232,197,71,0.9)';
+      ctx.textAlign = 'left';
+      const rowCenter = W / 2;
+      const leftX = rowCenter - 110;
+      const rightX = rowCenter + 50;
+      ctx.font = '28px "Press Start 2P"';
+      ctx.fillText(String(fightTaps), leftX, H * 0.84);
+      ctx.font = '11px "Press Start 2P"';
+      ctx.fillText('taps', leftX + 52, H * 0.84);
+      ctx.font = '28px "Press Start 2P"';
+      ctx.fillText(String(secLeft), rightX, H * 0.84);
+      ctx.font = '11px "Press Start 2P"';
+      ctx.fillText('s left', rightX + 44, H * 0.84);
+      ctx.textAlign = 'left';
       ctx.restore();
       return;
     }
@@ -548,11 +552,10 @@
     const canX = (clientX - rect.left) * (W / rect.width);
     const canY = (clientY - rect.top) * (H / rect.height);
     const sqX = W * SQUIRREL_CX, sqY = H * SQUIRREL_CY;
-    const size = Math.min(W, H) * 1.2;
-    const ringY = sqY + size * 0.30;
-    const ringR = size * 0.10;
-    const dx = canX - sqX, dy = canY - ringY;
-    return dx * dx + dy * dy <= ringR * ringR;
+    const size = Math.min(W, H) * 1.45;
+    const hitR = size / 2;
+    const dx = canX - sqX, dy = canY - sqY;
+    return dx * dx + dy * dy <= hitR * hitR;
   }
 
   function update(cx, cy) {
