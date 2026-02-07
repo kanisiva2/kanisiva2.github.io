@@ -70,7 +70,7 @@
     return { x: Math.cos(angle) * r, y: Math.sin(angle) * r, vx: 0, vy: 0 };
   }
   for (let i = 0; i < 8; i++) squirrels.push(spawnSquirrel());
-  let state = 0, timer = 20, tId = 0, score = 0, hiScore = 0;
+  let state = 0, timer = 15, tId = 0, score = 0, hiScore = 0;
   let fightEndTime = 0, fightTaps = 0, fightShake = 0;
   let rewardEndTime = 0, rewardStartTime = 0, bonusSeconds = 0;
   let rewardOverlay = false;
@@ -269,7 +269,7 @@
           }
           return true;
         });
-        bonusSeconds = 1 + Math.min(4, Math.floor(fightTaps / 8));
+        bonusSeconds = 1 + Math.min(4, Math.floor(fightTaps / 10));
         state = 1;
         joystickWrap.classList.remove('hidden');
         rewardOverlay = true;
@@ -323,7 +323,7 @@
         ctx.fillStyle = '#000';
         ctx.beginPath(); ctx.arc(sqX - sqR * 0.25, sqY - sqR * 0.6, sqR * 0.12, 0, Math.PI * 2); ctx.arc(sqX + sqR * 0.25, sqY - sqR * 0.6, sqR * 0.12, 0, Math.PI * 2); ctx.fill();
       }
-      const secLeft = Math.ceil((fightEndTime - Date.now()) / 1000);
+      const secLeft = Math.floor((fightEndTime - Date.now()) / 1000);
       const bounceY = Math.abs(Math.sin(animT * 0.12)) * 12;
       ctx.fillStyle = '#e8c547';
       ctx.font = '26px "Press Start 2P"';
@@ -605,7 +605,7 @@
   }
   function resetGame() {
     stopMus();
-    state = 0; timer = 20; score = 0;
+    state = 0; timer = 15; score = 0;
     pos.x = pos.y = vel.x = vel.y = cam.x = cam.y = joy.x = joy.y = 0;
     squirrels = [];
     for (let i = 0; i < 8; i++) squirrels.push(spawnSquirrel());
